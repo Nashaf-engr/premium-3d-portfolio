@@ -195,13 +195,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
           >
             Interactive Persona Scrub
           </h2>
-          <p
-            className={`text-xs sm:text-sm max-w-lg font-mono ${
-              isDark ? 'text-gray-400' : 'text-slate-600'
-            }`}
-          >
-            Scroll the webpage or drag across the video to rotate the character in full 360 degrees.
-          </p>
         </div>
 
         {/* ── Main Video Container with Drag Support (Outer Glassy Frame) ── */}
