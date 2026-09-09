@@ -1,190 +1,132 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-
-const TOTAL_FRAMES = 24;
-const FRAME_PATHS = Array.from({ length: TOTAL_FRAMES }, (_, i) => 
-  `/assets/turnaround/seq/frame_${String(i).padStart(2, '0')}.jpg`
-);
+import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaInfoCircle } from 'react-icons/fa';
 
 export default function Profile3DSection({ theme = 'dark' }) {
-  const canvasRef = useRef(null);
   const sectionRef = useRef(null);
-  const imagesRef = useRef([]);
+  const videoRef = useRef(null);
 
-  const [currentFrame, setCurrentFrame] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
+  const targetTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const startFrameRef = useRef(0);
-
   const isDark = theme === 'dark';
 
-  // ── Preload Turnaround Frames ──
-  useEffect(() => {
-    let loadedCount = 0;
-    const loadedImages = [];
+  // ── Video Metadata Loaded ──
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration || 5);
+      setVideoLoaded(true);
+      setVideoError(false);
+    }
+  };
 
-    FRAME_PATHS.forEach((path, index) => {
-      const img = new Image();
-      img.src = path;
-      img.onload = () => {
-        loadedCount += 1;
-        setLoadProgress(Math.round((loadedCount / TOTAL_FRAMES) * 100));
-        if (loadedCount === TOTAL_FRAMES) {
-          imagesRef.current = loadedImages;
-          setIsLoaded(true);
+  const handleVideoError = () => {
+    setVideoError(true);
+    setVideoLoaded(false);
+  };
+
+  // ── Smooth Scroll-Scrubbing Loop ──
+  useEffect(() => {
+    let animationFrameId;
+
+    const smoothScrub = () => {
+      const video = videoRef.current;
+      if (video && videoLoaded && !isPlaying && !isDraggingRef.current && duration > 0) {
+        // Damped interpolation towards targetTime for buttery-smooth scrubbing
+        const diff = targetTimeRef.current - video.currentTime;
+        if (Math.abs(diff) > 0.02) {
+          video.currentTime += diff * 0.15;
+          setCurrentTime(video.currentTime);
         }
-      };
-      loadedImages[index] = img;
-    });
-
-    return () => {
-      imagesRef.current = [];
-    };
-  }, []);
-
-  // ── Render Frame on Canvas ──
-  const drawFrame = useCallback((frameIndex) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const img = imagesRef.current[frameIndex];
-    if (!img || !img.complete) return;
-
-    // Set canvas dimensions
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = canvas.clientWidth;
-    const displayHeight = canvas.clientHeight;
-
-    if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
-      canvas.width = displayWidth * dpr;
-      canvas.height = displayHeight * dpr;
-      ctx.scale(dpr, dpr);
-    }
-
-    ctx.clearRect(0, 0, displayWidth, displayHeight);
-
-    // Fit image properly inside canvas (contain)
-    const imgRatio = img.width / img.height;
-    const canvasRatio = displayWidth / displayHeight;
-    let renderW, renderH, offsetX, offsetY;
-
-    if (canvasRatio > imgRatio) {
-      renderH = displayHeight * 0.94;
-      renderW = renderH * imgRatio;
-      offsetX = (displayWidth - renderW) / 2;
-      offsetY = displayHeight * 0.03;
-    } else {
-      renderW = displayWidth * 0.92;
-      renderH = renderW / imgRatio;
-      offsetX = (displayWidth - renderW) / 2;
-      offsetY = (displayHeight - renderH) / 2;
-    }
-
-    // Draw soft shadow at feet
-    const shadowY = offsetY + renderH - 15;
-    const shadowRadiusX = renderW * 0.32;
-    const shadowRadiusY = 12;
-    const shadowGrad = ctx.createRadialGradient(
-      displayWidth / 2, shadowY, 0,
-      displayWidth / 2, shadowY, shadowRadiusX
-    );
-    shadowGrad.addColorStop(0, isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.25)');
-    shadowGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = shadowGrad;
-    ctx.beginPath();
-    ctx.ellipse(displayWidth / 2, shadowY, shadowRadiusX, shadowRadiusY, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw character frame
-    ctx.drawImage(img, offsetX, offsetY, renderW, renderH);
-  }, [isDark]);
-
-  // Redraw when currentFrame changes
-  useEffect(() => {
-    if (isLoaded) {
-      drawFrame(currentFrame);
-    }
-  }, [currentFrame, isLoaded, drawFrame]);
-
-  // ── Scroll-Driven Scrubbing (Matching Reference: "SCROLL TO SCRUB TIMELINE") ──
-  useEffect(() => {
-    const handleScroll = () => {
-      const section = sectionRef.current;
-      if (!section || isDraggingRef.current || isPlaying) return;
-
-      const rect = section.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-
-      // When section enters the viewport
-      if (rect.top <= windowHeight && rect.bottom >= 0) {
-        const totalDistance = windowHeight + rect.height;
-        const currentDistance = windowHeight - rect.top;
-        const progress = Math.max(0, Math.min(1, currentDistance / totalDistance));
-
-        // Map scroll progress to 360-degree rotation frames
-        const targetFrame = Math.floor(progress * TOTAL_FRAMES * 1.5) % TOTAL_FRAMES;
-        setCurrentFrame(targetFrame);
       }
+      animationFrameId = requestAnimationFrame(smoothScrub);
     };
 
+    animationFrameId = requestAnimationFrame(smoothScrub);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [videoLoaded, isPlaying, duration]);
+
+  // ── Scroll Listener: Updates Target Video Time ──
+  const handleScroll = useCallback(() => {
+    const section = sectionRef.current;
+    if (!section || isPlaying || !duration) return;
+
+    const rect = section.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+
+    // Trigger when section is in viewport
+    if (rect.top <= windowHeight && rect.bottom >= 0) {
+      const totalDistance = windowHeight + rect.height;
+      const currentDistance = windowHeight - rect.top;
+      const progress = Math.max(0, Math.min(1, currentDistance / totalDistance));
+
+      setScrollProgress(progress);
+      targetTimeRef.current = progress * duration;
+    }
+  }, [isPlaying, duration]);
+
+  useEffect(() => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isPlaying]);
+  }, [handleScroll]);
 
-  // ── Auto-Play Turntable Animation ──
-  useEffect(() => {
-    if (!isPlaying || !isLoaded) return;
+  // ── Play / Pause Video ──
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
 
-    const interval = setInterval(() => {
-      setCurrentFrame((prev) => (prev + 1) % TOTAL_FRAMES);
-    }, 85);
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+    } else {
+      video.playbackRate = playbackSpeed;
+      video.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {
+        setIsPlaying(false);
+      });
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, [isPlaying, isLoaded]);
-
-  // ── Drag / Swipe to Rotate 360° ──
-  const handlePointerDown = (e) => {
-    isDraggingRef.current = true;
-    startXRef.current = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-    startFrameRef.current = currentFrame;
+  // ── Scrub Slider Change ──
+  const handleSliderChange = (e) => {
+    const val = parseFloat(e.target.value);
+    setCurrentTime(val);
+    targetTimeRef.current = val;
+    if (videoRef.current) {
+      videoRef.current.currentTime = val;
+    }
     setIsPlaying(false);
   };
 
-  const handlePointerMove = (e) => {
-    if (!isDraggingRef.current) return;
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-    const deltaX = clientX - startXRef.current;
-
-    // Sensitivity: ~15px drag = 1 frame rotation
-    const framesDiff = Math.floor(deltaX / 14);
-    let newFrame = (startFrameRef.current - framesDiff) % TOTAL_FRAMES;
-    if (newFrame < 0) newFrame += TOTAL_FRAMES;
-
-    setCurrentFrame(newFrame);
+  // ── Reset Video to Start ──
+  const handleReset = () => {
+    setIsPlaying(false);
+    targetTimeRef.current = 0;
+    setCurrentTime(0);
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.pause();
+    }
   };
 
-  const handlePointerUp = () => {
-    isDraggingRef.current = false;
+  // ── Toggle Playback Speed ──
+  const toggleSpeed = () => {
+    const nextSpeed = playbackSpeed === 1 ? 2 : playbackSpeed === 2 ? 0.5 : 1;
+    setPlaybackSpeed(nextSpeed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = nextSpeed;
+    }
   };
 
-  // Window resize handler
-  useEffect(() => {
-    const handleResize = () => {
-      if (isLoaded) drawFrame(currentFrame);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isLoaded, currentFrame, drawFrame]);
-
-  // Compute angle in degrees
-  const angleDegrees = Math.round((currentFrame / TOTAL_FRAMES) * 360);
+  // Compute rotation angle representation
+  const angleDegrees = duration > 0 ? Math.round((currentTime / duration) * 360) : Math.round(scrollProgress * 360);
 
   return (
     <section
@@ -225,12 +167,12 @@ export default function Profile3DSection({ theme = 'dark' }) {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
-          FOREGROUND CONTENT: 360° ROTATING CHARACTER CANVAS
+          FOREGROUND CONTENT: SCROLL-DRIVEN ROTATING CHARACTER VIDEO
          ══════════════════════════════════════════════════════════════ */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
         
         {/* Section Header */}
-        <div className="flex flex-col items-center text-center space-y-2 mb-4">
+        <div className="flex flex-col items-center text-center space-y-2 mb-6">
           <div
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-mono font-semibold border backdrop-blur-md ${
               isDark
@@ -239,7 +181,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
             }`}
           >
             <FaCompass className="text-accent animate-spin duration-3000" />
-            <span>360° Photorealistic Character Turnaround</span>
+            <span>Scroll-Driven 360° Character Turnaround</span>
           </div>
 
           <h2
@@ -254,66 +196,76 @@ export default function Profile3DSection({ theme = 'dark' }) {
               isDark ? 'text-gray-400' : 'text-slate-600'
             }`}
           >
-            Scroll the webpage or drag the character to inspect full 360° rotational turnaround.
+            Scroll the webpage or drag the timeline to rotate the character smoothly in full 360 degrees.
           </p>
         </div>
 
-        {/* ── Main 360° Viewport Canvas ── */}
-        <div className="relative w-full max-w-2xl h-[420px] sm:h-[500px] md:h-[560px] flex items-center justify-center select-none group">
-          
-          {/* Loading Indicator */}
-          {!isLoaded && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-30">
-              <div className="w-12 h-12 rounded-full border-4 border-accent/30 border-t-accent animate-spin" />
-              <span className="text-xs font-mono text-accent">
-                Loading 360° Frames ({loadProgress}%)
-              </span>
+        {/* ── Main Video Container ── */}
+        <div className="relative w-full max-w-xl h-[420px] sm:h-[500px] md:h-[560px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all"
+          style={{
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(248, 250, 252, 0.6)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(226, 232, 240, 0.8)',
+          }}
+        >
+          {/* Active Video Element */}
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            loop
+            preload="auto"
+            onLoadedMetadata={handleLoadedMetadata}
+            onTimeUpdate={() => {
+              if (videoRef.current && isPlaying) {
+                setCurrentTime(videoRef.current.currentTime);
+              }
+            }}
+            onError={handleVideoError}
+            className={`w-full h-full object-contain pointer-events-none transition-opacity duration-500 ${
+              videoLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <source src="/assets/character-360.mp4" type="video/mp4" />
+            <source src="/assets/character-360.webm" type="video/webm" />
+          </video>
+
+          {/* Placeholder when video is not yet added */}
+          {(!videoLoaded || videoError) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4">
+              <div className="w-36 h-48 sm:w-44 sm:h-56 rounded-2xl overflow-hidden border-2 border-accent/60 shadow-[0_0_30px_rgba(31,223,100,0.25)] relative group-hover:scale-105 transition-transform">
+                <img
+                  src="/assets/profile.png"
+                  alt="MFA Naseef Sharaf"
+                  className="w-full h-full object-cover object-top"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center pb-2">
+                  <span className="text-[11px] font-mono text-accent font-bold">Ready for Video</span>
+                </div>
+              </div>
+
+              <div
+                className={`p-4 rounded-2xl border backdrop-blur-md max-w-md text-xs font-mono space-y-1.5 ${
+                  isDark
+                    ? 'bg-black/70 border-white/10 text-gray-300'
+                    : 'bg-white/90 border-slate-200 text-slate-700 shadow-md'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2 text-accent font-bold">
+                  <FaVideo className="text-sm" />
+                  <span>Add Your Google Flow Video</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Save your turnaround video as <code className="text-accent bg-black/40 px-1.5 py-0.5 rounded">character-360.mp4</code> inside <code className="text-accent bg-black/40 px-1.5 py-0.5 rounded">public/assets/</code> to activate seamless scroll playback.
+                </p>
+              </div>
             </div>
           )}
-
-          {/* Canvas */}
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handlePointerDown}
-            onMouseMove={handlePointerMove}
-            onMouseUp={handlePointerUp}
-            onTouchStart={handlePointerDown}
-            onTouchMove={handlePointerMove}
-            onTouchEnd={handlePointerUp}
-            className="w-full h-full cursor-ew-resize active:cursor-grabbing relative z-10 block"
-            title="Click and drag horizontally to rotate 360°"
-          />
-
-          {/* Quick Step Buttons (Left & Right) */}
-          <button
-            onClick={() => setCurrentFrame((prev) => (prev - 1 + TOTAL_FRAMES) % TOTAL_FRAMES)}
-            className={`absolute left-2 sm:left-4 z-20 p-3 rounded-full border backdrop-blur-md transition-all hover:scale-110 active:scale-95 ${
-              isDark
-                ? 'bg-black/60 border-white/10 text-white hover:border-accent hover:text-accent'
-                : 'bg-white/80 border-slate-200 text-slate-800 hover:border-emerald-500 hover:text-emerald-700'
-            }`}
-            aria-label="Previous angle"
-          >
-            <FaChevronLeft className="text-sm" />
-          </button>
-
-          <button
-            onClick={() => setCurrentFrame((prev) => (prev + 1) % TOTAL_FRAMES)}
-            className={`absolute right-2 sm:right-4 z-20 p-3 rounded-full border backdrop-blur-md transition-all hover:scale-110 active:scale-95 ${
-              isDark
-                ? 'bg-black/60 border-white/10 text-white hover:border-accent hover:text-accent'
-                : 'bg-white/80 border-slate-200 text-slate-800 hover:border-emerald-500 hover:text-emerald-700'
-            }`}
-            aria-label="Next angle"
-          >
-            <FaChevronRight className="text-sm" />
-          </button>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
             SCRUBBER TIMELINE BAR (Matching Reference Image)
            ══════════════════════════════════════════════════════════════ */}
-        <div className="w-full max-w-xl mt-4 px-4 space-y-3 z-20">
+        <div className="w-full max-w-xl mt-6 px-4 space-y-3 z-20">
           
           {/* Timeline Status Strip (Matches "SCROLL TO SCRUB TIMELINE") */}
           <div className="flex items-center justify-between text-xs font-mono">
@@ -344,12 +296,14 @@ export default function Profile3DSection({ theme = 'dark' }) {
             <input
               type="range"
               min="0"
-              max={TOTAL_FRAMES - 1}
-              value={currentFrame}
-              onChange={(e) => {
-                setIsPlaying(false);
-                setCurrentFrame(parseInt(e.target.value, 10));
-              }}
+              max={duration || 10}
+              step="0.02"
+              value={currentTime}
+              onChange={handleSliderChange}
+              onMouseDown={() => { isDraggingRef.current = true; }}
+              onMouseUp={() => { isDraggingRef.current = false; }}
+              onTouchStart={() => { isDraggingRef.current = true; }}
+              onTouchEnd={() => { isDraggingRef.current = false; }}
               className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#1fdf64]"
             />
           </div>
@@ -358,8 +312,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
+                onClick={togglePlay}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
                   isPlaying
                     ? 'bg-accent text-midnight font-bold border-accent shadow-md shadow-accent/20'
                     : isDark
@@ -368,32 +322,41 @@ export default function Profile3DSection({ theme = 'dark' }) {
                 }`}
               >
                 {isPlaying ? <FaPause className="text-[10px]" /> : <FaPlay className="text-[10px]" />}
-                <span>{isPlaying ? 'Pause' : 'Auto 360° Spin'}</span>
+                <span>{isPlaying ? 'Pause' : 'Auto Play'}</span>
               </button>
 
               <button
-                onClick={() => {
-                  setIsPlaying(false);
-                  setCurrentFrame(0);
-                }}
+                onClick={toggleSpeed}
+                className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold backdrop-blur-md transition-all ${
+                  playbackSpeed !== 1
+                    ? 'bg-accent/20 text-accent border-accent/40'
+                    : isDark
+                    ? 'bg-evening border-white/10 text-gray-300'
+                    : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}
+                title="Playback Speed"
+              >
+                {playbackSpeed}x
+              </button>
+
+              <button
+                onClick={handleReset}
                 className={`p-2 rounded-xl border text-xs backdrop-blur-md transition-all ${
                   isDark
                     ? 'bg-evening border-white/10 text-gray-400 hover:text-white hover:border-accent'
                     : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
                 }`}
-                title="Reset to 0° Front View"
+                title="Reset to Start"
+                aria-label="Reset Video"
               >
                 <FaSyncAlt className="text-[10px]" />
               </button>
             </div>
 
-            <span
-              className={`text-[11px] font-mono ${
-                isDark ? 'text-gray-400' : 'text-slate-500'
-              }`}
-            >
-              Frame {currentFrame + 1} of {TOTAL_FRAMES}
-            </span>
+            <div className="flex items-center gap-1 text-[11px] font-mono text-light-gray">
+              <FaInfoCircle className="text-accent text-[10px]" />
+              <span>{currentTime.toFixed(1)}s / {(duration || 0).toFixed(1)}s</span>
+            </div>
           </div>
         </div>
 
