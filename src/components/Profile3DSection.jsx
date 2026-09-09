@@ -15,12 +15,16 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
   const targetTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startTimeRef = useRef(0);
+
   const isDark = theme === 'dark';
 
   // ── Video Metadata Loaded ──
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setDuration(videoRef.current.duration || 5);
+      const dur = videoRef.current.duration || 5;
+      setDuration(dur);
       setVideoLoaded(true);
       setVideoError(false);
     }
@@ -38,10 +42,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const smoothScrub = () => {
       const video = videoRef.current;
       if (video && videoLoaded && !isPlaying && !isDraggingRef.current && duration > 0) {
-        // Damped interpolation towards targetTime for buttery-smooth scrubbing
         const diff = targetTimeRef.current - video.currentTime;
         if (Math.abs(diff) > 0.02) {
-          video.currentTime += diff * 0.15;
+          video.currentTime += diff * 0.18;
           setCurrentTime(video.currentTime);
         }
       }
@@ -75,6 +78,35 @@ export default function Profile3DSection({ theme = 'dark' }) {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+
+  // ── Direct Drag / Swipe Scrubbing on Video ──
+  const handlePointerDown = (e) => {
+    isDraggingRef.current = true;
+    startXRef.current = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    startTimeRef.current = videoRef.current ? videoRef.current.currentTime : 0;
+    if (isPlaying && videoRef.current) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDraggingRef.current || !duration || !videoRef.current) return;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const deltaX = clientX - startXRef.current;
+
+    const timeDelta = (deltaX / 280) * duration;
+    let newTime = (startTimeRef.current - timeDelta) % duration;
+    if (newTime < 0) newTime += duration;
+
+    videoRef.current.currentTime = newTime;
+    targetTimeRef.current = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const handlePointerUp = () => {
+    isDraggingRef.current = false;
+  };
 
   // ── Play / Pause Video ──
   const togglePlay = () => {
@@ -196,20 +228,29 @@ export default function Profile3DSection({ theme = 'dark' }) {
               isDark ? 'text-gray-400' : 'text-slate-600'
             }`}
           >
-            Scroll the webpage or drag the timeline to rotate the character smoothly in full 360 degrees.
+            Scroll the webpage or drag across the video to rotate the character in full 360 degrees.
           </p>
         </div>
 
-        {/* ── Main Video Container ── */}
-        <div className="relative w-full max-w-xl h-[420px] sm:h-[500px] md:h-[560px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all"
+        {/* ── Main Video Container with Drag Support ── */}
+        <div
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchMove={handlePointerMove}
+          onTouchEnd={handlePointerUp}
+          className="relative w-full max-w-xl h-[420px] sm:h-[500px] md:h-[560px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-ew-resize active:cursor-grabbing"
           style={{
             backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(248, 250, 252, 0.6)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(226, 232, 240, 0.8)',
           }}
+          title="Drag horizontally to spin 360°"
         >
           {/* Active Video Element */}
           <video
             ref={videoRef}
+            src="/assets/character-360.mp4"
             playsInline
             muted
             loop
@@ -224,14 +265,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
             className={`w-full h-full object-contain pointer-events-none transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
-          >
-            <source src="/assets/character-360.mp4" type="video/mp4" />
-            <source src="/assets/character-360.webm" type="video/webm" />
-          </video>
+          />
 
-          {/* Placeholder when video is not yet added */}
+          {/* Placeholder when video is not loaded */}
           {(!videoLoaded || videoError) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4 pointer-events-none">
               <div className="w-36 h-48 sm:w-44 sm:h-56 rounded-2xl overflow-hidden border-2 border-accent/60 shadow-[0_0_30px_rgba(31,223,100,0.25)] relative group-hover:scale-105 transition-transform">
                 <img
                   src="/assets/profile.png"
@@ -239,7 +277,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
                   className="w-full h-full object-cover object-top"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center pb-2">
-                  <span className="text-[11px] font-mono text-accent font-bold">Ready for Video</span>
+                  <span className="text-[11px] font-mono text-accent font-bold">Loading Video...</span>
                 </div>
               </div>
 
@@ -252,10 +290,10 @@ export default function Profile3DSection({ theme = 'dark' }) {
               >
                 <div className="flex items-center justify-center gap-2 text-accent font-bold">
                   <FaVideo className="text-sm" />
-                  <span>Add Your Google Flow Video</span>
+                  <span>Google Flow Turnaround Video</span>
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  Save your turnaround video as <code className="text-accent bg-black/40 px-1.5 py-0.5 rounded">character-360.mp4</code> inside <code className="text-accent bg-black/40 px-1.5 py-0.5 rounded">public/assets/</code> to activate seamless scroll playback.
+                  Video loaded from <code className="text-accent bg-black/40 px-1.5 py-0.5 rounded">public/assets/character-360.mp4</code>.
                 </p>
               </div>
             </div>
