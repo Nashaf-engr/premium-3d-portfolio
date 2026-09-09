@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-black text-white font-sans antialiased overflow-x-hidden;
+    margin: 0;
+    padding: 0;
+    scroll-behavior: auto !important;
+  }
+
+  /* Custom Scrollbar - Green accent */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    background-color: #121212;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1fdf64;
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #19b853;
+  }
+
+  /* No scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Lenis support */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  /* === CARD SYSTEM === */
+  .card-base {
+    @apply bg-evening/95 rounded-xl transition-all duration-200 ease-linear border border-white/5;
+  }
+  .card-base:hover {
+    background-image: linear-gradient(to bottom right, rgba(31, 223, 100, 0.08), rgba(79, 70, 229, 0.04));
+  }
+
+  .card-glow {
+    @apply rounded-xl transition-all duration-200;
+  }
+  .card-glow:hover {
+    box-shadow: rgba(31, 223, 100, 0.7) 0px 2px 10px -1px, rgba(31, 223, 100, 0.5) 0px 1px 5px -1px;
+    transform: scale(1.01);
+  }
+
+  /* === BUTTON SYSTEM === */
+  .btn-primary {
+    @apply bg-accent hover:bg-accent/80 text-midnight text-sm sm:text-base font-bold px-8 py-2.5 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(31,223,100,0.3)];
+  }
+
+  .btn-outline {
+    @apply border border-accent/40 text-accent hover:bg-accent/10 px-6 py-2 rounded-xl transition-all duration-300 font-medium text-sm sm:text-base;
+  }
+
+  /* === INPUT SYSTEM === */
+  .input-field {
+    @apply bg-evening text-snow text-sm rounded-lg outline-none border border-white/10 focus:border-accent focus:ring-1 focus:ring-accent block w-full p-3 transition-colors placeholder-light-gray/50;
+  }
+}
+
+@layer utilities {
+  .text-stroke {
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
+    color: transparent;
+  }
+
+  .text-gradient-accent {
+    background: linear-gradient(135deg, #1fdf64 0%, #17a84b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* ==========================================
+   HIGH-CONTRAST LIGHT MODE THEME OVERRIDES
+   ========================================== */
+html:not(.dark) {
+  --bg-light: #f8fafc;
+  --surface-light: #ffffff;
+  --text-dark: #0f172a;
+  --text-muted: #334155;
+  --border-light: #e2e8f0;
+  --accent-light: #16a34a;
+}
+
+html:not(.dark) body {
+  background-color: var(--bg-light) !important;
+  color: var(--text-dark) !important;
+}
+
+html:not(.dark) ::selection {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+/* Backgrounds in light mode */
+html:not(.dark) .bg-black,
+html:not(.dark) .bg-zinc-950 {
+  background-color: var(--bg-light) !important;
+}
+
+html:not(.dark) .bg-deep,
+html:not(.dark) .bg-zinc-900 {
+  background-color: var(--surface-light) !important;
+  border-color: var(--border-light) !important;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .bg-midnight {
+  background-color: #ffffff !important;
+  border-color: var(--border-light) !important;
+}
+
+html:not(.dark) .bg-evening {
+  background-color: #f1f5f9 !important;
+  border-color: var(--border-light) !important;
+}
+
+html:not(.dark) .card-base {
+  background-color: var(--surface-light) !important;
+  border-color: var(--border-light) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Text colors in light mode */
+html:not(.dark) main .text-snow,
+html:not(.dark) header .text-snow,
+html:not(.dark) footer .text-snow {
+  color: var(--text-dark) !important;
+}
+
+html:not(.dark) main .text-light-gray,
+html:not(.dark) main .text-silver,
+html:not(.dark) main .text-gray-400,
+html:not(.dark) main .text-zinc-400,
+html:not(.dark) header .text-light-gray,
+html:not(.dark) footer .text-light-gray {
+  color: var(--text-muted) !important;
+}
+
+html:not(.dark) .text-accent {
+  color: var(--accent-light) !important;
+}
+
+/* Borders in light mode */
+html:not(.dark) .border-white\/5,
+html:not(.dark) .border-white\/10,
+html:not(.dark) .border-white\/15,
+html:not(.dark) .border-white\/20 {
+  border-color: var(--border-light) !important;
+}
+
+/* Inputs & Badges in light mode */
+html:not(.dark) .input-field {
+  background-color: #ffffff !important;
+  color: var(--text-dark) !important;
+  border-color: #cbd5e1 !important;
+}
+html:not(.dark) .input-field::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .stroke-gray-800 {
+  stroke: #e2e8f0 !important;
+}
+html:not(.dark) .stroke-accent {
+  stroke: var(--accent-light) !important;
+}

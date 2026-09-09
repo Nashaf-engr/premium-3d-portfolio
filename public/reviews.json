@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Peradeniya AgriTech",
+    "role": "Co-Founder",
+    "message": "Outstanding engineering and eye for detail. The smart plant monitoring system was integrated flawlessly!",
+    "avatar": "/assets/icon.png"
+  },
+  {
+    "name": "Bistro Cafe",
+    "role": "Owner",
+    "message": "Naseef brought our restaurant layout to life with smooth animations. Highly recommend his creative stack.",
+    "avatar": "/assets/icon.png"
+  },
+  {
+    "name": "UOP Engineering Faculty",
+    "role": "Coordinator",
+    "message": "A brilliant student and designer. His care for code logic is matched by his graphic layouts.",
+    "avatar": "/assets/icon.png"
+  },
+  {
+    "name": "Destino Travel",
+    "role": "Manager",
+    "message": "Very easy to work with, responsive, and produced a beautiful travel agency website theme.",
+    "avatar": "/assets/icon.png"
+  }
+]
