@@ -171,34 +171,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
       }}
     >
       {/* ══════════════════════════════════════════════════════════════
-          GLASS EFFECT NAME IN SECTION BACKGROUND
-         ══════════════════════════════════════════════════════════════ */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 overflow-hidden select-none">
-        <div
-          className="text-center font-display font-extrabold uppercase tracking-[0.14em] sm:tracking-[0.2em] leading-none opacity-40 sm:opacity-55 blur-[0.4px] transform scale-90 sm:scale-100"
-          style={{
-            fontSize: 'clamp(3rem, 9.5vw, 10.5rem)',
-            background: isDark
-              ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(31, 223, 100, 0.38) 100%)'
-              : 'linear-gradient(135deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.06) 50%, rgba(16, 185, 129, 0.45) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            filter: isDark
-              ? 'drop-shadow(0 0 55px rgba(31, 223, 100, 0.3)) drop-shadow(0 20px 45px rgba(0, 0, 0, 0.7))'
-              : 'drop-shadow(0 0 40px rgba(16, 185, 129, 0.25)) drop-shadow(0 15px 30px rgba(0, 0, 0, 0.1))',
-          }}
-        >
-          MFA NASEEF SHARAF
-        </div>
-        <div
-          className="font-mono text-xs sm:text-sm tracking-[0.45em] uppercase font-bold mt-3 opacity-60"
-          style={{ color: isDark ? '#10b981' : '#059669' }}
-        >
-          COMPUTER ENGINEER × CREATIVE DEVELOPER
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
           FOREGROUND CONTENT: SCROLL-DRIVEN ROTATING CHARACTER VIDEO
          ══════════════════════════════════════════════════════════════ */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
@@ -232,7 +204,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           </p>
         </div>
 
-        {/* ── Main Video Container with Drag Support ── */}
+        {/* ── Main Video Container with Drag Support (Outer Glassy Frame) ── */}
         <div
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
@@ -240,14 +212,17 @@ export default function Profile3DSection({ theme = 'dark' }) {
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}
-          className="relative w-full max-w-xl h-[420px] sm:h-[500px] md:h-[560px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-ew-resize active:cursor-grabbing"
+          className="relative w-full max-w-lg sm:max-w-xl h-[500px] sm:h-[580px] md:h-[640px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-ew-resize active:cursor-grabbing select-none"
           style={{
-            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(248, 250, 252, 0.6)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(226, 232, 240, 0.8)',
+            backgroundColor: isDark ? 'rgba(5, 7, 10, 0.7)' : 'rgba(248, 250, 252, 0.8)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(226, 232, 240, 0.9)',
+            boxShadow: isDark
+              ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 45px rgba(31, 223, 100, 0.15)'
+              : '0 25px 50px -15px rgba(0, 0, 0, 0.12), 0 0 30px rgba(16, 185, 129, 0.12)',
           }}
           title="Drag horizontally to spin 360°"
         >
-          {/* Active Video Element */}
+          {/* Active Video Element: Fitted edge-to-edge, cropped from bottom, top preserved */}
           <video
             ref={videoRef}
             src="/assets/character-360.mp4"
@@ -262,42 +237,75 @@ export default function Profile3DSection({ theme = 'dark' }) {
               }
             }}
             onError={handleVideoError}
-            className={`w-full h-full object-contain pointer-events-none transition-opacity duration-500 ${
+            className={`w-full h-full object-cover object-top pointer-events-none transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
 
-          {/* Placeholder when video is not loaded */}
+          {/* Placeholder when video is loading or fallback */}
           {(!videoLoaded || videoError) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4 pointer-events-none">
-              <div className="w-36 h-48 sm:w-44 sm:h-56 rounded-2xl overflow-hidden border-2 border-accent/60 shadow-[0_0_30px_rgba(31,223,100,0.25)] relative group-hover:scale-105 transition-transform">
-                <img
-                  src="/assets/profile.png"
-                  alt="MFA Naseef Sharaf"
-                  className="w-full h-full object-cover object-top"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center pb-2">
-                  <span className="text-[11px] font-mono text-accent font-bold">Loading Video...</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <img
+                src="/assets/profile.png"
+                alt="MFA Naseef Sharaf"
+                className="w-full h-full object-cover object-top opacity-50"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-center justify-center">
+                <div className="px-5 py-2.5 rounded-2xl bg-black/80 border border-white/10 backdrop-blur-md text-xs font-mono text-accent flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                  <span>Loading 360° Persona...</span>
                 </div>
-              </div>
-
-              <div
-                className={`p-4 rounded-2xl border backdrop-blur-md max-w-md text-xs font-mono space-y-1.5 ${
-                  isDark
-                    ? 'bg-black/70 border-white/10 text-gray-300'
-                    : 'bg-white/90 border-slate-200 text-slate-700 shadow-md'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-2 text-accent font-bold">
-                  <FaVideo className="text-sm" />
-                  <span>Google Flow Turnaround Video</span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  Video loaded from <code className="text-accent bg-black/40 px-1.5 py-0.5 rounded">public/assets/character-360.mp4</code>.
-                </p>
               </div>
             </div>
           )}
+
+          {/* Top Indicators inside Glassy Frame */}
+          <div className="absolute top-4 left-4 z-20 pointer-events-none flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/60 backdrop-blur-md text-gray-300 shadow-md">
+              360° Rotation
+            </span>
+          </div>
+
+          <div className="absolute top-4 right-4 z-20 pointer-events-none flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider border border-accent/40 bg-black/60 backdrop-blur-md text-accent shadow-md">
+              {angleDegrees}°
+            </span>
+          </div>
+
+          {/* ══════════════════════════════════════════════════════════════
+              GLASS EFFECT NAME OVERLAY (In Front of Video)
+             ══════════════════════════════════════════════════════════════ */}
+          <div className="absolute inset-x-0 bottom-0 pt-28 pb-7 px-4 sm:px-6 flex flex-col items-center justify-end text-center pointer-events-none z-20 bg-gradient-to-t from-black/90 via-black/45 to-transparent">
+            <div
+              className="font-display font-extrabold uppercase tracking-[0.14em] sm:tracking-[0.2em] leading-tight select-none"
+              style={{
+                fontSize: 'clamp(1.85rem, 5.5vw, 3.25rem)',
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.6) 45%, rgba(31, 223, 100, 0.95) 100%)'
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.8) 45%, rgba(52, 211, 153, 1) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 3px 12px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 28px rgba(31, 223, 100, 0.45))',
+              }}
+            >
+              MFA NASEEF SHARAF
+            </div>
+
+            <div
+              className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] sm:text-xs font-mono font-bold tracking-[0.22em] uppercase border backdrop-blur-md shadow-2xl"
+              style={{
+                backgroundColor: isDark ? 'rgba(10, 12, 16, 0.75)' : 'rgba(15, 23, 42, 0.8)',
+                borderColor: 'rgba(31, 223, 100, 0.4)',
+                color: '#10b981',
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              <span>COMPUTER ENGINEER × CREATIVE DEVELOPER</span>
+            </div>
+          </div>
+
+          {/* Inner Glass Rim Highlight */}
+          <div className="absolute inset-0 rounded-3xl pointer-events-none border border-white/10 z-30" />
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
