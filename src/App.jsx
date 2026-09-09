@@ -12,6 +12,7 @@ import CustomCursor from './components/CustomCursor';
 import BackgroundEffects from './components/BackgroundEffects';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import Profile3DSection from './components/Profile3DSection';
 import About from './components/About';
 import Expertise from './components/Expertise';
 import Skills from './components/Skills';
@@ -215,6 +216,7 @@ export default function App() {
           {/* ═══════════════ Main Scrollable Page ═══════════════ */}
           <main className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-12">
             <Hero theme={theme} />
+            <Profile3DSection theme={theme} />
             <About />
             <Expertise />
             <Skills />

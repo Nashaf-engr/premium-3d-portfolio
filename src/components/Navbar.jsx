@@ -15,10 +15,12 @@ import {
   FaComments,
   FaThLarge,
   FaLaptopCode,
+  FaCube,
 } from 'react-icons/fa';
 
 const navLinks = [
   { label: 'Home', id: 'home', icon: FaHome },
+  { label: '3D Persona', id: 'profile-3d', icon: FaCube },
   { label: 'About', id: 'about', icon: FaUser },
   { label: 'Expertise', id: 'expertise', icon: FaThLarge },
   { label: 'Skills', id: 'skills', icon: FaLaptopCode },
