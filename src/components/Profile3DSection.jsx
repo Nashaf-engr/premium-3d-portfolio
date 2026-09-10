@@ -324,9 +324,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}
-          className="relative w-full max-w-lg sm:max-w-xl h-[500px] sm:h-[580px] md:h-[640px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
+          className="relative mx-auto w-full max-w-[360px] sm:max-w-[400px] md:max-w-[440px] aspect-[9/16] max-h-[720px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
           style={{
-            backgroundColor: isDark ? 'rgba(5, 7, 10, 0.7)' : 'rgba(248, 250, 252, 0.8)',
+            backgroundColor: isDark ? 'rgba(5, 7, 10, 0.85)' : 'rgba(248, 250, 252, 0.95)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(226, 232, 240, 0.9)',
             boxShadow: isDark
               ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 45px rgba(31, 223, 100, 0.15)'
@@ -334,7 +334,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           }}
           title="Click to play or pause introduction with voice"
         >
-          {/* Active Video Element: Fitted edge-to-edge, cropped from bottom, top preserved */}
+          {/* Active Video Element: Fitted at center, 100% visible without bottom crop */}
           <video
             ref={videoRef}
             src="/assets/intro.mp4"
@@ -356,7 +356,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
             }}
             onError={handleVideoError}
             onSeeked={handleSeeked}
-            className={`w-full h-full object-cover object-top transition-opacity duration-500 ${
+            className={`w-full h-full object-contain object-center transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -394,7 +394,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               <img
                 src="/assets/profile.png"
                 alt="MFA Naseef Sharaf"
-                className="w-full h-full object-cover object-top opacity-50"
+                className="w-full h-full object-contain object-center opacity-50"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-center justify-center">
                 <div className="px-5 py-2.5 rounded-2xl bg-black/80 border border-white/10 backdrop-blur-md text-xs font-mono text-accent flex items-center gap-2">
@@ -407,7 +407,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
           {/* Top Indicators inside Glassy Frame */}
           <div className="absolute top-4 left-4 z-20 pointer-events-none flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/70 backdrop-blur-md text-white shadow-md flex items-center gap-1.5">
+            <span className="px-3 py-1.5 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/75 backdrop-blur-md text-white shadow-md flex items-center gap-1.5">
               <FaMicrophone className="text-accent animate-pulse" />
               <span>Broadcast Briefing</span>
             </span>
@@ -418,46 +418,14 @@ export default function Profile3DSection({ theme = 'dark' }) {
               onClick={toggleMute}
               className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-wider border backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md cursor-pointer ${
                 isMuted
-                  ? 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30'
-                  : 'bg-emerald-500/20 border-accent/40 text-accent hover:bg-emerald-500/30'
+                  ? 'bg-black/75 border-red-500/40 text-red-400 hover:bg-black/90'
+                  : 'bg-black/75 border-accent/50 text-accent hover:bg-black/90'
               }`}
               title={isMuted ? "Click to Unmute Voice" : "Voice is Live (Click to Mute)"}
             >
-              {isMuted ? <FaVolumeMute className="text-xs" /> : <FaVolumeUp className="text-xs animate-bounce" />}
+              {isMuted ? <FaVolumeMute className="text-xs" /> : <FaVolumeUp className="text-xs animate-pulse" />}
               <span>{isMuted ? 'Muted' : 'Voice Live'}</span>
             </button>
-          </div>
-
-          {/* ══════════════════════════════════════════════════════════════
-              GLASS EFFECT NAME OVERLAY (In Front of Video)
-             ══════════════════════════════════════════════════════════════ */}
-          <div className="absolute inset-x-0 bottom-0 pt-24 pb-6 px-4 sm:px-6 flex flex-col items-center justify-end text-center pointer-events-none z-20 bg-gradient-to-t from-black/90 via-black/45 to-transparent">
-            <div
-              className="font-display font-extrabold uppercase tracking-[0.14em] sm:tracking-[0.2em] leading-tight select-none"
-              style={{
-                fontSize: 'clamp(1.85rem, 5.5vw, 3.25rem)',
-                background: isDark
-                  ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.6) 45%, rgba(31, 223, 100, 0.95) 100%)'
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.8) 45%, rgba(52, 211, 153, 1) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                filter: 'drop-shadow(0 3px 12px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 28px rgba(31, 223, 100, 0.45))',
-              }}
-            >
-              MFA NASEEF SHARAF
-            </div>
-
-            <div
-              className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] sm:text-xs font-mono font-bold tracking-[0.22em] uppercase border backdrop-blur-md shadow-2xl"
-              style={{
-                backgroundColor: isDark ? 'rgba(10, 12, 16, 0.75)' : 'rgba(15, 23, 42, 0.8)',
-                borderColor: 'rgba(31, 223, 100, 0.4)',
-                color: '#10b981',
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              <span>COMPUTER ENGINEER × CREATIVE DEVELOPER</span>
-            </div>
           </div>
 
           {/* Inner Glass Rim Highlight */}
@@ -467,7 +435,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
         {/* ══════════════════════════════════════════════════════════════
             SCRUBBER TIMELINE BAR & VOICE CONTROLS
            ══════════════════════════════════════════════════════════════ */}
-        <div className="w-full max-w-xl mt-6 px-4 space-y-3 z-20">
+        <div className="w-full max-w-[360px] sm:max-w-[400px] md:max-w-[440px] mx-auto mt-6 px-1 space-y-3 z-20">
           
           {/* Timeline Status Strip */}
           <div className="flex items-center justify-between text-xs font-mono">
