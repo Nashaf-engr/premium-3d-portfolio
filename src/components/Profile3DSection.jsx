@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaInfoCircle } from 'react-icons/fa';
+import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaInfoCircle, FaVolumeUp, FaVolumeMute, FaMicrophone } from 'react-icons/fa';
 
 export default function Profile3DSection({ theme = 'dark' }) {
   const sectionRef = useRef(null);
@@ -9,10 +9,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(10);
   const [currentTime, setCurrentTime] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState(2);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
 
   const targetTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
@@ -25,10 +26,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
   // ── Video Metadata Loaded ──
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      const dur = videoRef.current.duration || 5;
+      const dur = videoRef.current.duration || 10;
       setDuration(dur);
-      videoRef.current.playbackRate = 2;
-      videoRef.current.defaultPlaybackRate = 2;
+      videoRef.current.playbackRate = playbackSpeed;
+      videoRef.current.defaultPlaybackRate = playbackSpeed;
+      videoRef.current.muted = isMuted;
       setVideoLoaded(true);
       setVideoError(false);
     }
@@ -117,8 +119,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
         e.preventDefault();
         e.stopPropagation();
 
-        // Play continuously from current time up to 360° with 2x base speed
-        const scrollSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 50) * 2.0, 2.0), 5.0);
+        // Play continuously from current time up to end
+        const scrollSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 60) * playbackSpeed, 1.0), 3.0);
         video.playbackRate = scrollSpeed;
 
         if (video.paused) {
@@ -150,9 +152,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           video.pause();
         }
 
-        // Matched speed: exact same responsiveness as forward 2x scrolling
-        const rewindSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 50) * 2.0, 2.0), 5.0);
-        const rewindStep = (duration * 0.04) * (rewindSpeed / 2.0);
+        // Responsive rewind without seek lag
+        const rewindSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 60, 1.0), 3.0);
+        const rewindStep = (duration * 0.03) * rewindSpeed;
 
         let prevTime = Math.max(0, targetTimeRef.current - rewindStep);
 
@@ -207,19 +209,34 @@ export default function Profile3DSection({ theme = 'dark' }) {
       video.pause();
       setIsPlaying(false);
     } else {
-      // If already at end, restart from 0 for a fresh rotation
-      if (video.currentTime >= duration - 0.06) {
+      // If already at end, restart from 0 for a fresh playthrough
+      if (video.currentTime >= duration - 0.08) {
         video.currentTime = 0;
         targetTimeRef.current = 0;
         setCurrentTime(0);
       }
       video.playbackRate = playbackSpeed;
+      video.muted = isMuted;
       video.play().then(() => {
         setIsPlaying(true);
-      }).catch(() => {
-        setIsPlaying(false);
+      }).catch((err) => {
+        // Fallback to muted if browser blocks unmuted playback
+        console.warn("Unmuted autoplay restricted, playing muted:", err);
+        video.muted = true;
+        setIsMuted(true);
+        video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       });
     }
+  };
+
+  // ── Toggle Audio / Voice Mute ──
+  const toggleMute = (e) => {
+    if (e) e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+    const nextMuted = !isMuted;
+    video.muted = nextMuted;
+    setIsMuted(nextMuted);
   };
 
   // ── Scrub Slider Change ──
@@ -234,7 +251,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
   };
 
   // ── Reset Video to Start ──
-  const handleReset = () => {
+  const handleReset = (e) => {
+    if (e) e.stopPropagation();
     setIsPlaying(false);
     targetTimeRef.current = 0;
     setCurrentTime(0);
@@ -245,8 +263,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
   };
 
   // ── Toggle Playback Speed ──
-  const toggleSpeed = () => {
-    const nextSpeed = playbackSpeed === 2 ? 3 : playbackSpeed === 3 ? 1 : 2;
+  const toggleSpeed = (e) => {
+    if (e) e.stopPropagation();
+    const speeds = [1, 1.25, 1.5, 2];
+    const currentIndex = speeds.indexOf(playbackSpeed);
+    const nextSpeed = speeds[(currentIndex + 1) % speeds.length] || 1;
     setPlaybackSpeed(nextSpeed);
     if (videoRef.current) {
       videoRef.current.playbackRate = nextSpeed;
@@ -267,7 +288,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
       }}
     >
       {/* ══════════════════════════════════════════════════════════════
-          FOREGROUND CONTENT: SCROLL-DRIVEN ROTATING CHARACTER VIDEO
+          FOREGROUND CONTENT: INTERACTIVE BROADCAST INTRODUCTION VIDEO
          ══════════════════════════════════════════════════════════════ */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
         
@@ -280,8 +301,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
                 : 'bg-white/80 border-emerald-500/40 text-emerald-700 shadow-sm'
             }`}
           >
-            <FaCompass className="text-accent animate-spin duration-3000" />
-            <span>Scroll-Driven 360° Character Turnaround</span>
+            <FaVideo className="text-accent animate-pulse" />
+            <span>Interactive Broadcast Introduction</span>
           </div>
 
           <h2
@@ -289,20 +310,21 @@ export default function Profile3DSection({ theme = 'dark' }) {
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            Interactive Persona Scrub
+            Welcome to My Portfolio
           </h2>
         </div>
 
-        {/* ── Main Video Container with Drag Support (Outer Glassy Frame) ── */}
+        {/* ── Main Video Container with Drag/Click Support (Outer Glassy Frame) ── */}
         <div
           ref={boxRef}
+          onClick={togglePlay}
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={handlePointerUp}
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}
-          className="relative w-full max-w-lg sm:max-w-xl h-[500px] sm:h-[580px] md:h-[640px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-ew-resize active:cursor-grabbing select-none"
+          className="relative w-full max-w-lg sm:max-w-xl h-[500px] sm:h-[580px] md:h-[640px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
           style={{
             backgroundColor: isDark ? 'rgba(5, 7, 10, 0.7)' : 'rgba(248, 250, 252, 0.8)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(226, 232, 240, 0.9)',
@@ -310,14 +332,14 @@ export default function Profile3DSection({ theme = 'dark' }) {
               ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 45px rgba(31, 223, 100, 0.15)'
               : '0 25px 50px -15px rgba(0, 0, 0, 0.12), 0 0 30px rgba(16, 185, 129, 0.12)',
           }}
-          title="Scroll or drag inside to spin 360°"
+          title="Click to play or pause introduction with voice"
         >
           {/* Active Video Element: Fitted edge-to-edge, cropped from bottom, top preserved */}
           <video
             ref={videoRef}
-            src="/assets/character-360.mp4"
+            src="/assets/intro.mp4"
             playsInline
-            muted
+            muted={isMuted}
             preload="auto"
             onLoadedMetadata={handleLoadedMetadata}
             onEnded={() => {
@@ -334,10 +356,37 @@ export default function Profile3DSection({ theme = 'dark' }) {
             }}
             onError={handleVideoError}
             onSeeked={handleSeeked}
-            className={`w-full h-full object-cover object-top pointer-events-none transition-opacity duration-500 ${
+            className={`w-full h-full object-cover object-top transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
+
+          {/* Big Center Play Button Overlay when Paused */}
+          {!isPlaying && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePlay();
+              }}
+              className="absolute z-25 p-5 sm:p-6 rounded-full bg-black/70 border border-accent/50 text-accent hover:bg-accent hover:text-midnight hover:scale-110 shadow-[0_0_35px_rgba(31,223,100,0.45)] backdrop-blur-md transition-all duration-300 group cursor-pointer"
+              title="Play Introduction with Voice"
+              aria-label="Play Introduction with Voice"
+            >
+              <FaPlay className="text-xl sm:text-2xl ml-1 group-hover:scale-110 transition-transform" />
+            </button>
+          )}
+
+          {/* Floating Unmute Helper Badge if Playing while Muted */}
+          {isPlaying && isMuted && (
+            <button
+              onClick={toggleMute}
+              className="absolute top-16 z-25 px-4 py-2 rounded-full bg-accent text-midnight font-bold text-xs font-mono shadow-[0_0_25px_rgba(31,223,100,0.6)] animate-pulse hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+              title="Click to hear voice"
+            >
+              <FaVolumeUp className="text-sm" />
+              <span>Tap to Hear Voice</span>
+            </button>
+          )}
 
           {/* Placeholder when video is loading or fallback */}
           {(!videoLoaded || videoError) && (
@@ -350,7 +399,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-center justify-center">
                 <div className="px-5 py-2.5 rounded-2xl bg-black/80 border border-white/10 backdrop-blur-md text-xs font-mono text-accent flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                  <span>Loading 360° Persona...</span>
+                  <span>Loading Introduction...</span>
                 </div>
               </div>
             </div>
@@ -358,21 +407,31 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
           {/* Top Indicators inside Glassy Frame */}
           <div className="absolute top-4 left-4 z-20 pointer-events-none flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/60 backdrop-blur-md text-gray-300 shadow-md">
-              Scroll Inside Box to Rotate
+            <span className="px-3 py-1.5 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/70 backdrop-blur-md text-white shadow-md flex items-center gap-1.5">
+              <FaMicrophone className="text-accent animate-pulse" />
+              <span>Broadcast Briefing</span>
             </span>
           </div>
 
-          <div className="absolute top-4 right-4 z-20 pointer-events-none flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider border border-accent/40 bg-black/60 backdrop-blur-md text-accent shadow-md">
-              {angleDegrees}°
-            </span>
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            <button
+              onClick={toggleMute}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-wider border backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md cursor-pointer ${
+                isMuted
+                  ? 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30'
+                  : 'bg-emerald-500/20 border-accent/40 text-accent hover:bg-emerald-500/30'
+              }`}
+              title={isMuted ? "Click to Unmute Voice" : "Voice is Live (Click to Mute)"}
+            >
+              {isMuted ? <FaVolumeMute className="text-xs" /> : <FaVolumeUp className="text-xs animate-bounce" />}
+              <span>{isMuted ? 'Muted' : 'Voice Live'}</span>
+            </button>
           </div>
 
           {/* ══════════════════════════════════════════════════════════════
               GLASS EFFECT NAME OVERLAY (In Front of Video)
              ══════════════════════════════════════════════════════════════ */}
-          <div className="absolute inset-x-0 bottom-0 pt-28 pb-7 px-4 sm:px-6 flex flex-col items-center justify-end text-center pointer-events-none z-20 bg-gradient-to-t from-black/90 via-black/45 to-transparent">
+          <div className="absolute inset-x-0 bottom-0 pt-24 pb-6 px-4 sm:px-6 flex flex-col items-center justify-end text-center pointer-events-none z-20 bg-gradient-to-t from-black/90 via-black/45 to-transparent">
             <div
               className="font-display font-extrabold uppercase tracking-[0.14em] sm:tracking-[0.2em] leading-tight select-none"
               style={{
@@ -406,11 +465,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
-            SCRUBBER TIMELINE BAR (Matching Reference Image)
+            SCRUBBER TIMELINE BAR & VOICE CONTROLS
            ══════════════════════════════════════════════════════════════ */}
         <div className="w-full max-w-xl mt-6 px-4 space-y-3 z-20">
           
-          {/* Timeline Status Strip (Matches "SCROLL TO SCRUB TIMELINE") */}
+          {/* Timeline Status Strip */}
           <div className="flex items-center justify-between text-xs font-mono">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
@@ -419,7 +478,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
                   isDark ? 'text-white' : 'text-slate-800'
                 }`}
               >
-                Scroll to Scrub Timeline
+                Introduction Timeline
               </span>
             </div>
 
@@ -430,7 +489,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
                   : 'bg-slate-100 border-slate-200 text-emerald-700'
               }`}
             >
-              {angleDegrees}° / 360°
+              {currentTime.toFixed(1)}s / {(duration || 10).toFixed(1)}s
             </div>
           </div>
 
@@ -465,7 +524,22 @@ export default function Profile3DSection({ theme = 'dark' }) {
                 }`}
               >
                 {isPlaying ? <FaPause className="text-[10px]" /> : <FaPlay className="text-[10px]" />}
-                <span>{isPlaying ? 'Pause' : 'Auto Play'}</span>
+                <span>{isPlaying ? 'Pause' : 'Play Briefing'}</span>
+              </button>
+
+              <button
+                onClick={toggleMute}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
+                  !isMuted
+                    ? 'bg-accent/20 text-accent border-accent/40 shadow-sm'
+                    : isDark
+                    ? 'bg-evening border-white/10 text-gray-400 hover:text-white'
+                    : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}
+                title="Toggle Voice / Audio"
+              >
+                {isMuted ? <FaVolumeMute className="text-[11px]" /> : <FaVolumeUp className="text-[11px] text-accent animate-pulse" />}
+                <span>{isMuted ? 'Unmute' : 'Voice On'}</span>
               </button>
 
               <button
@@ -498,7 +572,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
             <div className="flex items-center gap-1 text-[11px] font-mono text-light-gray">
               <FaInfoCircle className="text-accent text-[10px]" />
-              <span>{currentTime.toFixed(1)}s / {(duration || 0).toFixed(1)}s</span>
+              <span>{currentTime.toFixed(1)}s / {(duration || 10).toFixed(1)}s</span>
             </div>
           </div>
         </div>
