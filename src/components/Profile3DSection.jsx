@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaInfoCircle, FaVolumeUp, FaVolumeMute, FaMicrophone } from 'react-icons/fa';
+import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaVolumeUp, FaVolumeMute, FaMicrophone } from 'react-icons/fa';
 
 export default function Profile3DSection({ theme = 'dark' }) {
   const sectionRef = useRef(null);
@@ -302,7 +302,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
             }`}
           >
             <FaVideo className="text-accent animate-pulse" />
-            <span>Interactive Broadcast Introduction</span>
+            <span>Interactive Personal Video</span>
           </div>
 
           <h2
@@ -310,7 +310,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               isDark ? 'text-white' : 'text-slate-900'
             }`}
           >
-            Welcome to My Portfolio
+            Broadcast Briefing & Introduction
           </h2>
         </div>
 
@@ -546,11 +546,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
               >
                 <FaSyncAlt className="text-[10px]" />
               </button>
-            </div>
-
-            <div className="flex items-center gap-2 text-[11px] font-mono text-light-gray">
-              <FaInfoCircle className="text-accent text-[10px]" />
-              <span>{currentTime.toFixed(1)}s / {(duration || 10).toFixed(1)}s</span>
             </div>
           </div>
         </div>
