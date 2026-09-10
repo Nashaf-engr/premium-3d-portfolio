@@ -78,11 +78,16 @@ export default function Profile3DSection({ theme = 'dark' }) {
       if (video && videoLoaded && duration > 0) {
         // Only sync from video.currentTime while playing forward natively
         if (!video.paused && !isDraggingRef.current) {
-          if (video.currentTime >= duration - 0.04) {
-            video.currentTime = 0;
+          if (video.currentTime >= duration - 0.06) {
+            video.pause();
+            video.currentTime = duration;
+            targetTimeRef.current = duration;
+            setCurrentTime(duration);
+            setIsPlaying(false);
+          } else {
+            setCurrentTime(video.currentTime);
+            targetTimeRef.current = video.currentTime;
           }
-          setCurrentTime(video.currentTime);
-          targetTimeRef.current = video.currentTime;
         }
       }
       animationFrameId = requestAnimationFrame(syncLoop);
@@ -93,19 +98,26 @@ export default function Profile3DSection({ theme = 'dark' }) {
   }, [videoLoaded, duration]);
 
   // ── 1. Scroll INSIDE the Box: Continuous Play & Instant Backward Rewind ──
+  // Hands off natural page scroll once a full rotation (360°) or start (0°) is reached
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
 
     const handleWheelInsideBox = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
       const video = videoRef.current;
       if (!duration || !video) return;
 
       if (e.deltaY > 0) {
-        // SCROLLING DOWN (FORWARD): Play continuously from 0 to end with 2x base speed
+        // SCROLLING DOWN (FORWARD)
+        // If full rotation complete (at or past 360° / duration), allow natural page scroll down
+        if (targetTimeRef.current >= duration - 0.06 || video.currentTime >= duration - 0.06 || video.ended) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Play continuously from current time up to 360° with 2x base speed
         const scrollSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 50) * 2.0, 2.0), 5.0);
         video.playbackRate = scrollSpeed;
 
@@ -122,7 +134,15 @@ export default function Profile3DSection({ theme = 'dark' }) {
           }
         }, 150);
       } else if (e.deltaY < 0) {
-        // SCROLLING UP (BACKWARD): Rewind instantly without seek lag at matching 2x speed
+        // SCROLLING UP (BACKWARD)
+        // If already at starting point (0s / 0°), allow natural page scroll up
+        if (targetTimeRef.current <= 0.03 || video.currentTime <= 0.03) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
@@ -134,8 +154,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
         const rewindSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 50) * 2.0, 2.0), 5.0);
         const rewindStep = (duration * 0.04) * (rewindSpeed / 2.0);
 
-        let prevTime = targetTimeRef.current - rewindStep;
-        if (prevTime < 0) prevTime = ((duration + prevTime) % duration);
+        let prevTime = Math.max(0, targetTimeRef.current - rewindStep);
 
         targetTimeRef.current = prevTime;
         setCurrentTime(prevTime);
@@ -149,24 +168,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     };
   }, [duration, isPlaying, performSeek]);
-
-  // ── 2. Scroll OUTSIDE the Box: Video Remains at Starting Point (0s / 0°) ──
-  useEffect(() => {
-    const handleOutsideScroll = () => {
-      if (!isPlaying) {
-        const video = videoRef.current;
-        if (video) {
-          video.pause();
-          video.currentTime = 0;
-        }
-        targetTimeRef.current = 0;
-        setCurrentTime(0);
-      }
-    };
-
-    window.addEventListener('scroll', handleOutsideScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleOutsideScroll);
-  }, [isPlaying]);
 
   // ── Direct Drag / Swipe Scrubbing on Video ──
   const handlePointerDown = (e) => {
@@ -184,10 +185,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
     const deltaX = clientX - startXRef.current;
 
-    // Smooth continuous scrub (fast 140px per 360° turnaround)
+    // Smooth continuous scrub (fast 140px per 360° turnaround, clamped between 0 and duration)
     const timeDelta = (deltaX / 140) * duration;
-    let newTime = (startTimeRef.current - timeDelta) % duration;
-    if (newTime < 0) newTime += duration;
+    let newTime = Math.min(duration, Math.max(0, startTimeRef.current - timeDelta));
 
     videoRef.current.currentTime = newTime;
     targetTimeRef.current = newTime;
@@ -207,6 +207,12 @@ export default function Profile3DSection({ theme = 'dark' }) {
       video.pause();
       setIsPlaying(false);
     } else {
+      // If already at end, restart from 0 for a fresh rotation
+      if (video.currentTime >= duration - 0.06) {
+        video.currentTime = 0;
+        targetTimeRef.current = 0;
+        setCurrentTime(0);
+      }
       video.playbackRate = playbackSpeed;
       video.play().then(() => {
         setIsPlaying(true);
@@ -312,9 +318,15 @@ export default function Profile3DSection({ theme = 'dark' }) {
             src="/assets/character-360.mp4"
             playsInline
             muted
-            loop
             preload="auto"
             onLoadedMetadata={handleLoadedMetadata}
+            onEnded={() => {
+              setIsPlaying(false);
+              if (duration > 0) {
+                targetTimeRef.current = duration;
+                setCurrentTime(duration);
+              }
+            }}
             onTimeUpdate={() => {
               if (videoRef.current && isPlaying) {
                 setCurrentTime(videoRef.current.currentTime);
