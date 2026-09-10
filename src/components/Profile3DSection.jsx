@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaVolumeUp, FaVolumeMute, FaMicrophone } from 'react-icons/fa';
+import { useEffect, useRef, useState } from 'react';
+import { FaPlay, FaPause, FaSyncAlt, FaVideo, FaVolumeUp, FaVolumeMute, FaMicrophone } from 'react-icons/fa';
 
 export default function Profile3DSection({ theme = 'dark' }) {
   const sectionRef = useRef(null);
-  const boxRef = useRef(null);
   const videoRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -11,15 +10,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
   const [videoError, setVideoError] = useState(false);
   const [duration, setDuration] = useState(10);
   const [currentTime, setCurrentTime] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
 
   const targetTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const startYRef = useRef(0);
-  const startTimeRef = useRef(0);
 
   const isDark = theme === 'dark';
 
@@ -41,44 +36,13 @@ export default function Profile3DSection({ theme = 'dark' }) {
     setVideoLoaded(false);
   };
 
-  const scrollTimeoutRef = useRef(null);
-  const isSeekingRef = useRef(false);
-
-  // ── High-Speed Non-Blocking Video Seek for Backward Scrubbing ──
-  const performSeek = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !duration) return;
-
-    if (isSeekingRef.current || video.seeking) return; // Prevent seek queue buildup
-
-    const target = targetTimeRef.current;
-    if (Math.abs(video.currentTime - target) > 0.015) {
-      isSeekingRef.current = true;
-      video.currentTime = target;
-    }
-  }, [duration]);
-
-  // When browser decoder finishes current seek, catch up immediately to latest target
-  const handleSeeked = () => {
-    isSeekingRef.current = false;
-    const video = videoRef.current;
-    if (!video || !duration) return;
-
-    const target = targetTimeRef.current;
-    if (video.paused && Math.abs(video.currentTime - target) > 0.02) {
-      isSeekingRef.current = true;
-      video.currentTime = target;
-    }
-  };
-
-  // ── Continuous 60fps Sync Loop: Slider & Angle Progress Smoothly from 0 to End ──
+  // ── Continuous 60fps Sync Loop for Timeline Range Slider ──
   useEffect(() => {
     let animationFrameId;
 
     const syncLoop = () => {
       const video = videoRef.current;
       if (video && videoLoaded && duration > 0) {
-        // Only sync from video.currentTime while playing forward natively
         if (!video.paused && !isDraggingRef.current) {
           if (video.currentTime >= duration - 0.06) {
             video.pause();
@@ -98,107 +62,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
     animationFrameId = requestAnimationFrame(syncLoop);
     return () => cancelAnimationFrame(animationFrameId);
   }, [videoLoaded, duration]);
-
-  // ── 1. Scroll INSIDE the Box: Continuous Play & Instant Backward Rewind ──
-  // Hands off natural page scroll once a full rotation (360°) or start (0°) is reached
-  useEffect(() => {
-    const box = boxRef.current;
-    if (!box) return;
-
-    const handleWheelInsideBox = (e) => {
-      const video = videoRef.current;
-      if (!duration || !video) return;
-
-      if (e.deltaY > 0) {
-        // SCROLLING DOWN (FORWARD)
-        // If full rotation complete (at or past 360° / duration), allow natural page scroll down
-        if (targetTimeRef.current >= duration - 0.06 || video.currentTime >= duration - 0.06 || video.ended) {
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Play continuously from current time up to end
-        const scrollSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 60) * playbackSpeed, 1.0), 3.0);
-        video.playbackRate = scrollSpeed;
-
-        if (video.paused) {
-          video.play().catch(() => {});
-        }
-
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        scrollTimeoutRef.current = setTimeout(() => {
-          if (!isPlaying && videoRef.current) {
-            videoRef.current.pause();
-          }
-        }, 150);
-      } else if (e.deltaY < 0) {
-        // SCROLLING UP (BACKWARD)
-        // If already at starting point (0s / 0°), allow natural page scroll up
-        if (targetTimeRef.current <= 0.03 || video.currentTime <= 0.03) {
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        if (!video.paused) {
-          video.pause();
-        }
-
-        // Responsive rewind without seek lag
-        const rewindSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 60, 1.0), 3.0);
-        const rewindStep = (duration * 0.03) * rewindSpeed;
-
-        let prevTime = Math.max(0, targetTimeRef.current - rewindStep);
-
-        targetTimeRef.current = prevTime;
-        setCurrentTime(prevTime);
-        performSeek();
-      }
-    };
-
-    box.addEventListener('wheel', handleWheelInsideBox, { passive: false });
-    return () => {
-      box.removeEventListener('wheel', handleWheelInsideBox);
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    };
-  }, [duration, isPlaying, performSeek]);
-
-  // ── Direct Drag / Swipe Scrubbing on Video ──
-  const handlePointerDown = (e) => {
-    isDraggingRef.current = true;
-    startXRef.current = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-    startTimeRef.current = videoRef.current ? videoRef.current.currentTime : 0;
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-    setIsPlaying(false);
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDraggingRef.current || !duration || !videoRef.current) return;
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-    const deltaX = clientX - startXRef.current;
-
-    // Smooth continuous scrub (fast 140px per 360° turnaround, clamped between 0 and duration)
-    const timeDelta = (deltaX / 140) * duration;
-    let newTime = Math.min(duration, Math.max(0, startTimeRef.current - timeDelta));
-
-    videoRef.current.currentTime = newTime;
-    targetTimeRef.current = newTime;
-    setCurrentTime(newTime);
-  };
-
-  const handlePointerUp = () => {
-    isDraggingRef.current = false;
-  };
 
   // ── Play / Pause Video ──
   const togglePlay = () => {
@@ -220,7 +83,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
       video.play().then(() => {
         setIsPlaying(true);
       }).catch((err) => {
-        // Fallback to muted if browser blocks unmuted playback
         console.warn("Unmuted autoplay restricted, playing muted:", err);
         video.muted = true;
         setIsMuted(true);
@@ -247,7 +109,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
     if (videoRef.current) {
       videoRef.current.currentTime = val;
     }
-    setIsPlaying(false);
   };
 
   // ── Reset Video to Start ──
@@ -273,9 +134,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
       videoRef.current.playbackRate = nextSpeed;
     }
   };
-
-  // Compute rotation angle representation
-  const angleDegrees = duration > 0 ? Math.round((currentTime / duration) * 360) : Math.round(scrollProgress * 360);
 
   return (
     <section
@@ -314,16 +172,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           </h2>
         </div>
 
-        {/* ── Main Video Container with Drag/Click Support (16:9 Landscape Frame) ── */}
+        {/* ── Main Video Container (16:9 Landscape Frame) ── */}
         <div
-          ref={boxRef}
           onClick={togglePlay}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
           className="relative mx-auto w-full max-w-4xl lg:max-w-5xl rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
           style={{
             aspectRatio: '16 / 9',
@@ -333,7 +184,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 50px rgba(31, 223, 100, 0.12)'
               : '0 25px 50px -15px rgba(0, 0, 0, 0.12), 0 0 30px rgba(16, 185, 129, 0.12)',
           }}
-          title="Click to play or pause introduction with voice"
+          title="Click to play or pause video"
         >
           {/* Active Video Element: Native 16:9 Landscape, 100% uncropped */}
           <video
@@ -357,7 +208,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
               }
             }}
             onError={handleVideoError}
-            onSeeked={handleSeeked}
             className={`w-full h-full object-contain object-center transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
