@@ -12,7 +12,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState(2);
 
   const targetTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
@@ -27,6 +27,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
     if (videoRef.current) {
       const dur = videoRef.current.duration || 5;
       setDuration(dur);
+      videoRef.current.playbackRate = 2;
+      videoRef.current.defaultPlaybackRate = 2;
       setVideoLoaded(true);
       setVideoError(false);
     }
@@ -103,8 +105,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
       if (!duration || !video) return;
 
       if (e.deltaY > 0) {
-        // SCROLLING DOWN (FORWARD): Play continuously from 0 to end
-        const scrollSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 65, 1.0), 3.0);
+        // SCROLLING DOWN (FORWARD): Play continuously from 0 to end with 2x base speed
+        const scrollSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 50) * 2.0, 2.0), 5.0);
         video.playbackRate = scrollSpeed;
 
         if (video.paused) {
@@ -118,9 +120,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           if (!isPlaying && videoRef.current) {
             videoRef.current.pause();
           }
-        }, 160);
+        }, 150);
       } else if (e.deltaY < 0) {
-        // SCROLLING UP (BACKWARD): Rewind instantly without seek lag
+        // SCROLLING UP (BACKWARD): Rewind instantly without seek lag at matching 2x speed
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
@@ -128,9 +130,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           video.pause();
         }
 
-        // Matched speed: exact same responsiveness as forward scrolling
-        const rewindSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 65, 1.0), 3.0);
-        const rewindStep = (duration * 0.025) * rewindSpeed;
+        // Matched speed: exact same responsiveness as forward 2x scrolling
+        const rewindSpeed = Math.min(Math.max((Math.abs(e.deltaY) / 50) * 2.0, 2.0), 5.0);
+        const rewindStep = (duration * 0.04) * (rewindSpeed / 2.0);
 
         let prevTime = targetTimeRef.current - rewindStep;
         if (prevTime < 0) prevTime = ((duration + prevTime) % duration);
@@ -182,8 +184,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
     const deltaX = clientX - startXRef.current;
 
-    // Smooth continuous scrub
-    const timeDelta = (deltaX / 280) * duration;
+    // Smooth continuous scrub (fast 140px per 360° turnaround)
+    const timeDelta = (deltaX / 140) * duration;
     let newTime = (startTimeRef.current - timeDelta) % duration;
     if (newTime < 0) newTime += duration;
 
@@ -238,7 +240,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
   // ── Toggle Playback Speed ──
   const toggleSpeed = () => {
-    const nextSpeed = playbackSpeed === 1 ? 2 : playbackSpeed === 2 ? 0.5 : 1;
+    const nextSpeed = playbackSpeed === 2 ? 3 : playbackSpeed === 3 ? 1 : 2;
     setPlaybackSpeed(nextSpeed);
     if (videoRef.current) {
       videoRef.current.playbackRate = nextSpeed;
