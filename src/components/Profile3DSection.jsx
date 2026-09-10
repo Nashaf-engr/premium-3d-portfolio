@@ -338,8 +338,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
           {/* Active Video Element: Native 16:9 Landscape, 100% uncropped */}
           <video
             ref={videoRef}
-            src="/assets/intro-widescreen.mp4"
-            poster="/assets/intro-poster.jpg"
+            src="/assets/intro-final.mp4"
+            poster="/assets/intro-final-poster.jpg"
             playsInline
             muted={isMuted}
             preload="auto"
@@ -397,7 +397,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           {(!videoLoaded || videoError) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <img
-                src="/assets/intro-poster.jpg"
+                src="/assets/intro-final-poster.jpg"
                 alt="MFA Naseef Sharaf"
                 className="w-full h-full object-contain object-center"
               />
