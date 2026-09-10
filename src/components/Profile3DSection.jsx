@@ -3,6 +3,7 @@ import { FaPlay, FaPause, FaSyncAlt, FaCompass, FaVideo, FaInfoCircle } from 're
 
 export default function Profile3DSection({ theme = 'dark' }) {
   const sectionRef = useRef(null);
+  const boxRef = useRef(null);
   const videoRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -16,6 +17,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
   const targetTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const startTimeRef = useRef(0);
 
   const isDark = theme === 'dark';
@@ -35,7 +37,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
     setVideoLoaded(false);
   };
 
-  // ── Smooth Scroll-Scrubbing Loop ──
+  // ── Smooth Scrub Loop ──
   useEffect(() => {
     let animationFrameId;
 
@@ -44,7 +46,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
       if (video && videoLoaded && !isPlaying && !isDraggingRef.current && duration > 0) {
         const diff = targetTimeRef.current - video.currentTime;
         if (Math.abs(diff) > 0.02) {
-          video.currentTime += diff * 0.18;
+          video.currentTime += diff * 0.25;
           setCurrentTime(video.currentTime);
         }
       }
@@ -55,34 +57,59 @@ export default function Profile3DSection({ theme = 'dark' }) {
     return () => cancelAnimationFrame(animationFrameId);
   }, [videoLoaded, isPlaying, duration]);
 
-  // ── Scroll Listener: Updates Target Video Time ──
-  const handleScroll = useCallback(() => {
-    const section = sectionRef.current;
-    if (!section || isPlaying || !duration) return;
-
-    const rect = section.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-
-    // Trigger when section is in viewport
-    if (rect.top <= windowHeight && rect.bottom >= 0) {
-      const totalDistance = windowHeight + rect.height;
-      const currentDistance = windowHeight - rect.top;
-      const progress = Math.max(0, Math.min(1, currentDistance / totalDistance));
-
-      setScrollProgress(progress);
-      targetTimeRef.current = progress * duration;
-    }
-  }, [isPlaying, duration]);
-
+  // ── 1. Scroll INSIDE the Box: Wheel Event Scrubs/Plays Video ──
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+    const box = boxRef.current;
+    if (!box) return;
+
+    const handleWheelInsideBox = (e) => {
+      // Prevent webpage scrolling while mouse wheeling inside the 360 box
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!duration || !videoRef.current) return;
+
+      if (isPlaying) {
+        setIsPlaying(false);
+        videoRef.current.pause();
+      }
+
+      // Scrolling down advances video, scrolling up rewinds
+      const delta = e.deltaY;
+      const step = (delta / 260) * (duration * 0.16);
+      let nextTime = (targetTimeRef.current + step) % duration;
+      if (nextTime < 0) nextTime += duration;
+
+      targetTimeRef.current = nextTime;
+      setCurrentTime(nextTime);
+      videoRef.current.currentTime = nextTime;
+    };
+
+    box.addEventListener('wheel', handleWheelInsideBox, { passive: false });
+    return () => box.removeEventListener('wheel', handleWheelInsideBox);
+  }, [duration, isPlaying]);
+
+  // ── 2. Scroll OUTSIDE the Box: Video Remains at Starting Point (0s) ──
+  useEffect(() => {
+    const handleOutsideScroll = () => {
+      if (!isPlaying) {
+        targetTimeRef.current = 0;
+        setCurrentTime(0);
+        if (videoRef.current && Math.abs(videoRef.current.currentTime) > 0.02) {
+          videoRef.current.currentTime = 0;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleOutsideScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleOutsideScroll);
+  }, [isPlaying]);
 
   // ── Direct Drag / Swipe Scrubbing on Video ──
   const handlePointerDown = (e) => {
     isDraggingRef.current = true;
     startXRef.current = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    startYRef.current = e.clientY || (e.touches && e.touches[0].clientY) || 0;
     startTimeRef.current = videoRef.current ? videoRef.current.currentTime : 0;
     if (isPlaying && videoRef.current) {
       videoRef.current.pause();
@@ -93,9 +120,13 @@ export default function Profile3DSection({ theme = 'dark' }) {
   const handlePointerMove = (e) => {
     if (!isDraggingRef.current || !duration || !videoRef.current) return;
     const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
     const deltaX = clientX - startXRef.current;
+    const deltaY = clientY - startYRef.current;
 
-    const timeDelta = (deltaX / 280) * duration;
+    // Use dominant axis or horizontal drag
+    const delta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : -deltaY;
+    const timeDelta = (delta / 280) * duration;
     let newTime = (startTimeRef.current - timeDelta) % duration;
     if (newTime < 0) newTime += duration;
 
@@ -199,6 +230,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
         {/* ── Main Video Container with Drag Support (Outer Glassy Frame) ── */}
         <div
+          ref={boxRef}
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={handlePointerUp}
@@ -213,7 +245,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 45px rgba(31, 223, 100, 0.15)'
               : '0 25px 50px -15px rgba(0, 0, 0, 0.12), 0 0 30px rgba(16, 185, 129, 0.12)',
           }}
-          title="Drag horizontally to spin 360°"
+          title="Scroll or drag inside to spin 360°"
         >
           {/* Active Video Element: Fitted edge-to-edge, cropped from bottom, top preserved */}
           <video
@@ -255,7 +287,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           {/* Top Indicators inside Glassy Frame */}
           <div className="absolute top-4 left-4 z-20 pointer-events-none flex items-center gap-2">
             <span className="px-3 py-1 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/60 backdrop-blur-md text-gray-300 shadow-md">
-              360° Rotation
+              Scroll Inside Box to Rotate
             </span>
           </div>
 

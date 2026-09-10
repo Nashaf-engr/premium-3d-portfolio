@@ -90,7 +90,7 @@ export default function Hero({ theme = 'dark' }) {
                 }`}
               >
                 <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                <span>Faculty of Engineering • UoP</span>
+                <span>Online</span>
               </div>
 
               <span

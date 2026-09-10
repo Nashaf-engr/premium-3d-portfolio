@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AOS from 'aos';
 import SectionHeader from './SectionHeader';
 import ProgressBar from './ProgressBar';
@@ -39,17 +39,44 @@ export default function Skills() {
   const [webDev, setWebDev] = useState(0);
   const [design, setDesign] = useState(0);
   const [engLogic, setEngLogic] = useState(0);
+  const metersRef = useRef(null);
 
   useEffect(() => {
     AOS.init();
 
-    const timer = setInterval(() => {
-      setWebDev((prev) => (prev < 95 ? prev + 1 : 95));
-      setDesign((prev) => (prev < 88 ? prev + 1 : 88));
-      setEngLogic((prev) => (prev < 82 ? prev + 1 : 82));
-    }, 25);
+    const handleScroll = () => {
+      const el = metersRef.current;
+      if (!el) return;
 
-    return () => clearInterval(timer);
+      const rect = el.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+
+      // Start filling when card enters bottom (95% of viewport)
+      // Fully complete when card reaches comfortable middle view (40% of viewport)
+      const start = windowHeight * 0.95;
+      const end = windowHeight * 0.40;
+
+      let progress = 0;
+      if (rect.top <= end) {
+        progress = 1;
+      } else if (rect.top < start) {
+        const raw = (start - rect.top) / (start - end);
+        const clamped = Math.max(0, Math.min(1, raw));
+        // Smooth easeOut quad for natural filling feel
+        progress = 1 - Math.pow(1 - clamped, 2);
+      } else {
+        progress = 0;
+      }
+
+      setWebDev(Math.round(progress * 95));
+      setDesign(Math.round(progress * 88));
+      setEngLogic(Math.round(progress * 82));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
@@ -61,7 +88,7 @@ export default function Skills() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
           {/* Circular Capability Meters Card */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5" ref={metersRef}>
             <CardLayout>
               <div className="card-base p-6 md:p-8 h-full flex flex-col justify-between space-y-4">
                 <h3 className="font-display font-bold text-base text-snow uppercase tracking-wider border-b border-white/5 pb-3">
@@ -72,7 +99,7 @@ export default function Skills() {
                   {/* Circle 1 */}
                   <div className="flex flex-col items-center gap-2">
                     <div className="relative w-18 h-18 sm:w-20 sm:h-20 flex items-center justify-center">
-                      <svg className="w-full h-full -rotate-90">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
                         <circle
                           cx="40"
                           cy="40"
@@ -84,10 +111,11 @@ export default function Skills() {
                           cx="40"
                           cy="40"
                           r="32"
-                          className="stroke-accent fill-none transition-all duration-300"
+                          className="stroke-accent fill-none transition-all duration-300 ease-out"
                           strokeWidth="4"
                           strokeDasharray={2 * Math.PI * 32}
                           strokeDashoffset={2 * Math.PI * 32 * (1 - webDev / 100)}
+                          strokeLinecap="round"
                         />
                       </svg>
                       <span className="absolute text-sm font-bold font-mono text-snow">
@@ -100,7 +128,7 @@ export default function Skills() {
                   {/* Circle 2 */}
                   <div className="flex flex-col items-center gap-2">
                     <div className="relative w-18 h-18 sm:w-20 sm:h-20 flex items-center justify-center">
-                      <svg className="w-full h-full -rotate-90">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
                         <circle
                           cx="40"
                           cy="40"
@@ -112,10 +140,11 @@ export default function Skills() {
                           cx="40"
                           cy="40"
                           r="32"
-                          className="stroke-accent fill-none transition-all duration-300"
+                          className="stroke-accent fill-none transition-all duration-300 ease-out"
                           strokeWidth="4"
                           strokeDasharray={2 * Math.PI * 32}
                           strokeDashoffset={2 * Math.PI * 32 * (1 - design / 100)}
+                          strokeLinecap="round"
                         />
                       </svg>
                       <span className="absolute text-sm font-bold font-mono text-snow">
@@ -128,7 +157,7 @@ export default function Skills() {
                   {/* Circle 3 */}
                   <div className="flex flex-col items-center gap-2">
                     <div className="relative w-18 h-18 sm:w-20 sm:h-20 flex items-center justify-center">
-                      <svg className="w-full h-full -rotate-90">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
                         <circle
                           cx="40"
                           cy="40"
@@ -140,10 +169,11 @@ export default function Skills() {
                           cx="40"
                           cy="40"
                           r="32"
-                          className="stroke-accent fill-none transition-all duration-300"
+                          className="stroke-accent fill-none transition-all duration-300 ease-out"
                           strokeWidth="4"
                           strokeDasharray={2 * Math.PI * 32}
                           strokeDashoffset={2 * Math.PI * 32 * (1 - engLogic / 100)}
+                          strokeLinecap="round"
                         />
                       </svg>
                       <span className="absolute text-sm font-bold font-mono text-snow">
