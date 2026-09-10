@@ -314,7 +314,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           </h2>
         </div>
 
-        {/* ── Main Video Container with Drag/Click Support (Outer Glassy Frame) ── */}
+        {/* ── Main Video Container with Drag/Click Support (16:9 Landscape Frame) ── */}
         <div
           ref={boxRef}
           onClick={togglePlay}
@@ -324,17 +324,17 @@ export default function Profile3DSection({ theme = 'dark' }) {
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}
-          className="relative mx-auto w-full max-w-[360px] sm:max-w-[400px] md:max-w-[440px] aspect-[9/16] max-h-[720px] rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
+          className="relative mx-auto w-full max-w-4xl lg:max-w-5xl aspect-video rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
           style={{
             backgroundColor: isDark ? 'rgba(5, 7, 10, 0.85)' : 'rgba(248, 250, 252, 0.95)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(226, 232, 240, 0.9)',
             boxShadow: isDark
-              ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 45px rgba(31, 223, 100, 0.15)'
+              ? '0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 50px rgba(31, 223, 100, 0.12)'
               : '0 25px 50px -15px rgba(0, 0, 0, 0.12), 0 0 30px rgba(16, 185, 129, 0.12)',
           }}
           title="Click to play or pause introduction with voice"
         >
-          {/* Active Video Element: Fitted at center, 100% visible without bottom crop */}
+          {/* Active Video Element: Native 16:9 Landscape, perfectly fitted */}
           <video
             ref={videoRef}
             src="/assets/intro.mp4"
@@ -356,7 +356,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
             }}
             onError={handleVideoError}
             onSeeked={handleSeeked}
-            className={`w-full h-full object-contain object-center transition-opacity duration-500 ${
+            className={`w-full h-full object-cover object-center transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -368,11 +368,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
                 e.stopPropagation();
                 togglePlay();
               }}
-              className="absolute z-25 p-5 sm:p-6 rounded-full bg-black/70 border border-accent/50 text-accent hover:bg-accent hover:text-midnight hover:scale-110 shadow-[0_0_35px_rgba(31,223,100,0.45)] backdrop-blur-md transition-all duration-300 group cursor-pointer"
+              className="absolute z-25 p-6 sm:p-7 rounded-full bg-black/70 border border-accent/50 text-accent hover:bg-accent hover:text-midnight hover:scale-110 shadow-[0_0_40px_rgba(31,223,100,0.5)] backdrop-blur-md transition-all duration-300 group cursor-pointer"
               title="Play Introduction with Voice"
               aria-label="Play Introduction with Voice"
             >
-              <FaPlay className="text-xl sm:text-2xl ml-1 group-hover:scale-110 transition-transform" />
+              <FaPlay className="text-2xl sm:text-3xl ml-1 group-hover:scale-110 transition-transform" />
             </button>
           )}
 
@@ -380,7 +380,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           {isPlaying && isMuted && (
             <button
               onClick={toggleMute}
-              className="absolute top-16 z-25 px-4 py-2 rounded-full bg-accent text-midnight font-bold text-xs font-mono shadow-[0_0_25px_rgba(31,223,100,0.6)] animate-pulse hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+              className="absolute top-16 sm:top-20 z-25 px-4 py-2 rounded-full bg-accent text-midnight font-bold text-xs font-mono shadow-[0_0_25px_rgba(31,223,100,0.6)] animate-pulse hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
               title="Click to hear voice"
             >
               <FaVolumeUp className="text-sm" />
@@ -406,17 +406,17 @@ export default function Profile3DSection({ theme = 'dark' }) {
           )}
 
           {/* Top Indicators inside Glassy Frame */}
-          <div className="absolute top-4 left-4 z-20 pointer-events-none flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-full text-[10px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/75 backdrop-blur-md text-white shadow-md flex items-center gap-1.5">
+          <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-20 pointer-events-none flex items-center gap-2">
+            <span className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-semibold tracking-wider uppercase border border-white/15 bg-black/75 backdrop-blur-md text-white shadow-md flex items-center gap-2">
               <FaMicrophone className="text-accent animate-pulse" />
-              <span>Broadcast Briefing</span>
+              <span>Broadcast Briefing • 16:9 HD</span>
             </span>
           </div>
 
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 flex items-center gap-2">
             <button
               onClick={toggleMute}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold tracking-wider border backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-wider border backdrop-blur-md transition-all flex items-center gap-2 shadow-md cursor-pointer ${
                 isMuted
                   ? 'bg-black/75 border-red-500/40 text-red-400 hover:bg-black/90'
                   : 'bg-black/75 border-accent/50 text-accent hover:bg-black/90'
@@ -433,9 +433,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
-            SCRUBBER TIMELINE BAR & VOICE CONTROLS
+            SCRUBBER TIMELINE BAR & VOICE CONTROLS (16:9 Widescreen Width)
            ══════════════════════════════════════════════════════════════ */}
-        <div className="w-full max-w-[360px] sm:max-w-[400px] md:max-w-[440px] mx-auto mt-6 px-1 space-y-3 z-20">
+        <div className="w-full max-w-4xl lg:max-w-5xl mx-auto mt-6 px-2 space-y-3 z-20">
           
           {/* Timeline Status Strip */}
           <div className="flex items-center justify-between text-xs font-mono">
@@ -450,14 +450,19 @@ export default function Profile3DSection({ theme = 'dark' }) {
               </span>
             </div>
 
-            <div
-              className={`px-3 py-1 rounded-full font-bold border ${
-                isDark
-                  ? 'bg-evening/80 border-white/10 text-accent'
-                  : 'bg-slate-100 border-slate-200 text-emerald-700'
-              }`}
-            >
-              {currentTime.toFixed(1)}s / {(duration || 10).toFixed(1)}s
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded border border-white/10 text-[10px] font-mono text-gray-400">
+                1080P WIDESCREEN
+              </span>
+              <div
+                className={`px-3 py-1 rounded-full font-bold border ${
+                  isDark
+                    ? 'bg-evening/80 border-white/10 text-accent'
+                    : 'bg-slate-100 border-slate-200 text-emerald-700'
+                }`}
+              >
+                {currentTime.toFixed(1)}s / {(duration || 10).toFixed(1)}s
+              </div>
             </div>
           </div>
 
@@ -483,7 +488,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
             <div className="flex items-center gap-2">
               <button
                 onClick={togglePlay}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
                   isPlaying
                     ? 'bg-accent text-midnight font-bold border-accent shadow-md shadow-accent/20'
                     : isDark
@@ -497,7 +502,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
               <button
                 onClick={toggleMute}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-mono font-medium backdrop-blur-md transition-all ${
                   !isMuted
                     ? 'bg-accent/20 text-accent border-accent/40 shadow-sm'
                     : isDark
@@ -512,7 +517,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
               <button
                 onClick={toggleSpeed}
-                className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold backdrop-blur-md transition-all ${
+                className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold backdrop-blur-md transition-all ${
                   playbackSpeed !== 1
                     ? 'bg-accent/20 text-accent border-accent/40'
                     : isDark
@@ -526,7 +531,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
               <button
                 onClick={handleReset}
-                className={`p-2 rounded-xl border text-xs backdrop-blur-md transition-all ${
+                className={`p-2.5 rounded-xl border text-xs backdrop-blur-md transition-all ${
                   isDark
                     ? 'bg-evening border-white/10 text-gray-400 hover:text-white hover:border-accent'
                     : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
@@ -538,7 +543,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               </button>
             </div>
 
-            <div className="flex items-center gap-1 text-[11px] font-mono text-light-gray">
+            <div className="flex items-center gap-2 text-[11px] font-mono text-light-gray">
               <FaInfoCircle className="text-accent text-[10px]" />
               <span>{currentTime.toFixed(1)}s / {(duration || 10).toFixed(1)}s</span>
             </div>
