@@ -37,112 +37,132 @@ export default function Profile3DSection({ theme = 'dark' }) {
     setVideoLoaded(false);
   };
 
-  // ── High-Speed Non-Blocking Video Seek ──
-  const applySeek = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !duration) return;
+  const scrollTimeoutRef = useRef(null);
 
-    if (video.seeking) return; // Wait for onSeeked to prevent decoder queue choke
+  // ── Continuous 60fps Sync Loop: Slider & Angle Progress Smoothly from 0 to End ──
+  useEffect(() => {
+    let animationFrameId;
 
-    const target = targetTimeRef.current;
-    if (Math.abs(video.currentTime - target) > 0.015) {
-      if (typeof video.fastSeek === 'function') {
-        video.fastSeek(target);
-      } else {
-        video.currentTime = target;
+    const syncLoop = () => {
+      const video = videoRef.current;
+      if (video && videoLoaded && duration > 0) {
+        // Continuous 360 loop while scrolling
+        if (!video.paused && video.currentTime >= duration - 0.04) {
+          video.currentTime = 0;
+        }
+
+        if (!isDraggingRef.current) {
+          setCurrentTime(video.currentTime);
+          targetTimeRef.current = video.currentTime;
+        }
       }
-    }
-  }, [duration]);
+      animationFrameId = requestAnimationFrame(syncLoop);
+    };
 
-  // When browser decoder finishes current seek, catch up immediately to latest target
-  const handleSeeked = () => {
-    const video = videoRef.current;
-    if (!video || !duration) return;
+    animationFrameId = requestAnimationFrame(syncLoop);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [videoLoaded, duration]);
 
-    const target = targetTimeRef.current;
-    if (Math.abs(video.currentTime - target) > 0.02) {
-      if (typeof video.fastSeek === 'function') {
-        video.fastSeek(target);
-      } else {
-        video.currentTime = target;
-      }
-    }
-  };
-
-  // ── 1. Scroll INSIDE the Box: Sped-Up Wheel Event ──
+  // ── 1. Scroll INSIDE the Box: Continuous Play & Continuous Rewind ──
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
 
     const handleWheelInsideBox = (e) => {
-      // Prevent webpage scrolling while mouse wheeling inside the 360 box
       e.preventDefault();
       e.stopPropagation();
 
-      if (!duration || !videoRef.current) return;
+      const video = videoRef.current;
+      if (!duration || !video) return;
 
-      if (isPlaying) {
-        setIsPlaying(false);
-        videoRef.current.pause();
+      if (e.deltaY > 0) {
+        // SCROLLING DOWN (FORWARD): Play continuously from 0 to end
+        // Adjust speed dynamically to match scroll intensity
+        const scrollSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 65, 1.0), 3.0);
+        video.playbackRate = scrollSpeed;
+
+        if (video.paused) {
+          video.play().catch(() => {});
+        }
+
+        // Pause smoothly as soon as scrolling stops
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        scrollTimeoutRef.current = setTimeout(() => {
+          if (!isPlaying && videoRef.current) {
+            videoRef.current.pause();
+          }
+        }, 160);
+      } else if (e.deltaY < 0) {
+        // SCROLLING UP (BACKWARD): Rewind continuously
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        if (!video.paused) {
+          video.pause();
+        }
+
+        // Fine continuous rewind step
+        const rewindStep = (Math.abs(e.deltaY) / 100) * 0.06;
+        let prevTime = video.currentTime - rewindStep;
+        if (prevTime < 0) prevTime = ((duration + prevTime) % duration);
+
+        video.currentTime = prevTime;
+        setCurrentTime(prevTime);
+        targetTimeRef.current = prevTime;
       }
-
-      // Sped up significantly: 2-3 notches spins full 360°
-      const delta = e.deltaY;
-      const step = (delta / 110) * (duration * 0.28);
-      let nextTime = (targetTimeRef.current + step) % duration;
-      if (nextTime < 0) nextTime += duration;
-
-      targetTimeRef.current = nextTime;
-      setCurrentTime(nextTime);
-      applySeek();
     };
 
     box.addEventListener('wheel', handleWheelInsideBox, { passive: false });
-    return () => box.removeEventListener('wheel', handleWheelInsideBox);
-  }, [duration, isPlaying, applySeek]);
+    return () => {
+      box.removeEventListener('wheel', handleWheelInsideBox);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [duration, isPlaying]);
 
-  // ── 2. Scroll OUTSIDE the Box: Video Remains at Starting Point (0s) ──
+  // ── 2. Scroll OUTSIDE the Box: Video Remains at Starting Point (0s / 0°) ──
   useEffect(() => {
     const handleOutsideScroll = () => {
       if (!isPlaying) {
+        const video = videoRef.current;
+        if (video) {
+          video.pause();
+          video.currentTime = 0;
+        }
         targetTimeRef.current = 0;
         setCurrentTime(0);
-        applySeek();
       }
     };
 
     window.addEventListener('scroll', handleOutsideScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleOutsideScroll);
-  }, [isPlaying, applySeek]);
+  }, [isPlaying]);
 
   // ── Direct Drag / Swipe Scrubbing on Video ──
   const handlePointerDown = (e) => {
     isDraggingRef.current = true;
     startXRef.current = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-    startYRef.current = e.clientY || (e.touches && e.touches[0].clientY) || 0;
     startTimeRef.current = videoRef.current ? videoRef.current.currentTime : 0;
-    if (isPlaying && videoRef.current) {
+    if (videoRef.current) {
       videoRef.current.pause();
-      setIsPlaying(false);
     }
+    setIsPlaying(false);
   };
 
   const handlePointerMove = (e) => {
     if (!isDraggingRef.current || !duration || !videoRef.current) return;
     const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
     const deltaX = clientX - startXRef.current;
-    const deltaY = clientY - startYRef.current;
 
-    // Use dominant axis with high sensitivity (140px drag per 360 deg)
-    const delta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : -deltaY;
-    const timeDelta = (delta / 140) * duration;
+    // Smooth continuous scrub
+    const timeDelta = (deltaX / 280) * duration;
     let newTime = (startTimeRef.current - timeDelta) % duration;
     if (newTime < 0) newTime += duration;
 
+    videoRef.current.currentTime = newTime;
     targetTimeRef.current = newTime;
     setCurrentTime(newTime);
-    applySeek();
   };
 
   const handlePointerUp = () => {
@@ -172,7 +192,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const val = parseFloat(e.target.value);
     setCurrentTime(val);
     targetTimeRef.current = val;
-    applySeek();
+    if (videoRef.current) {
+      videoRef.current.currentTime = val;
+    }
     setIsPlaying(false);
   };
 
@@ -183,8 +205,8 @@ export default function Profile3DSection({ theme = 'dark' }) {
     setCurrentTime(0);
     if (videoRef.current) {
       videoRef.current.pause();
+      videoRef.current.currentTime = 0;
     }
-    applySeek();
   };
 
   // ── Toggle Playback Speed ──
@@ -270,7 +292,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
               }
             }}
             onError={handleVideoError}
-            onSeeked={handleSeeked}
             className={`w-full h-full object-cover object-top pointer-events-none transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
