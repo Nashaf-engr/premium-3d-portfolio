@@ -37,27 +37,39 @@ export default function Profile3DSection({ theme = 'dark' }) {
     setVideoLoaded(false);
   };
 
-  // ── Smooth Scrub Loop ──
-  useEffect(() => {
-    let animationFrameId;
+  // ── High-Speed Non-Blocking Video Seek ──
+  const applySeek = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !duration) return;
 
-    const smoothScrub = () => {
-      const video = videoRef.current;
-      if (video && videoLoaded && !isPlaying && !isDraggingRef.current && duration > 0) {
-        const diff = targetTimeRef.current - video.currentTime;
-        if (Math.abs(diff) > 0.02) {
-          video.currentTime += diff * 0.25;
-          setCurrentTime(video.currentTime);
-        }
+    if (video.seeking) return; // Wait for onSeeked to prevent decoder queue choke
+
+    const target = targetTimeRef.current;
+    if (Math.abs(video.currentTime - target) > 0.015) {
+      if (typeof video.fastSeek === 'function') {
+        video.fastSeek(target);
+      } else {
+        video.currentTime = target;
       }
-      animationFrameId = requestAnimationFrame(smoothScrub);
-    };
+    }
+  }, [duration]);
 
-    animationFrameId = requestAnimationFrame(smoothScrub);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [videoLoaded, isPlaying, duration]);
+  // When browser decoder finishes current seek, catch up immediately to latest target
+  const handleSeeked = () => {
+    const video = videoRef.current;
+    if (!video || !duration) return;
 
-  // ── 1. Scroll INSIDE the Box: Wheel Event Scrubs/Plays Video ──
+    const target = targetTimeRef.current;
+    if (Math.abs(video.currentTime - target) > 0.02) {
+      if (typeof video.fastSeek === 'function') {
+        video.fastSeek(target);
+      } else {
+        video.currentTime = target;
+      }
+    }
+  };
+
+  // ── 1. Scroll INSIDE the Box: Sped-Up Wheel Event ──
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
@@ -74,20 +86,20 @@ export default function Profile3DSection({ theme = 'dark' }) {
         videoRef.current.pause();
       }
 
-      // Scrolling down advances video, scrolling up rewinds
+      // Sped up significantly: 2-3 notches spins full 360°
       const delta = e.deltaY;
-      const step = (delta / 260) * (duration * 0.16);
+      const step = (delta / 110) * (duration * 0.28);
       let nextTime = (targetTimeRef.current + step) % duration;
       if (nextTime < 0) nextTime += duration;
 
       targetTimeRef.current = nextTime;
       setCurrentTime(nextTime);
-      videoRef.current.currentTime = nextTime;
+      applySeek();
     };
 
     box.addEventListener('wheel', handleWheelInsideBox, { passive: false });
     return () => box.removeEventListener('wheel', handleWheelInsideBox);
-  }, [duration, isPlaying]);
+  }, [duration, isPlaying, applySeek]);
 
   // ── 2. Scroll OUTSIDE the Box: Video Remains at Starting Point (0s) ──
   useEffect(() => {
@@ -95,15 +107,13 @@ export default function Profile3DSection({ theme = 'dark' }) {
       if (!isPlaying) {
         targetTimeRef.current = 0;
         setCurrentTime(0);
-        if (videoRef.current && Math.abs(videoRef.current.currentTime) > 0.02) {
-          videoRef.current.currentTime = 0;
-        }
+        applySeek();
       }
     };
 
     window.addEventListener('scroll', handleOutsideScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleOutsideScroll);
-  }, [isPlaying]);
+  }, [isPlaying, applySeek]);
 
   // ── Direct Drag / Swipe Scrubbing on Video ──
   const handlePointerDown = (e) => {
@@ -124,15 +134,15 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const deltaX = clientX - startXRef.current;
     const deltaY = clientY - startYRef.current;
 
-    // Use dominant axis or horizontal drag
+    // Use dominant axis with high sensitivity (140px drag per 360 deg)
     const delta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : -deltaY;
-    const timeDelta = (delta / 280) * duration;
+    const timeDelta = (delta / 140) * duration;
     let newTime = (startTimeRef.current - timeDelta) % duration;
     if (newTime < 0) newTime += duration;
 
-    videoRef.current.currentTime = newTime;
     targetTimeRef.current = newTime;
     setCurrentTime(newTime);
+    applySeek();
   };
 
   const handlePointerUp = () => {
@@ -162,9 +172,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const val = parseFloat(e.target.value);
     setCurrentTime(val);
     targetTimeRef.current = val;
-    if (videoRef.current) {
-      videoRef.current.currentTime = val;
-    }
+    applySeek();
     setIsPlaying(false);
   };
 
@@ -174,9 +182,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
     targetTimeRef.current = 0;
     setCurrentTime(0);
     if (videoRef.current) {
-      videoRef.current.currentTime = 0;
       videoRef.current.pause();
     }
+    applySeek();
   };
 
   // ── Toggle Playback Speed ──
@@ -262,6 +270,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               }
             }}
             onError={handleVideoError}
+            onSeeked={handleSeeked}
             className={`w-full h-full object-cover object-top pointer-events-none transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}

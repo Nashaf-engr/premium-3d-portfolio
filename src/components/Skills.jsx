@@ -6,10 +6,10 @@ import Badge from './Badge';
 import CardLayout from './CardLayout';
 
 const linearSkills = [
-  { label: 'Frontend Development (React, JavaScript, HTML5, CSS3)', percent: '92%' },
-  { label: 'UI/UX & Graphic Design (Figma, Photoshop, Illustrator)', percent: '85%' },
-  { label: 'Programming & Logic (Python, C++)', percent: '78%' },
-  { label: 'IoT & Embedded Systems (Arduino, Sensors)', percent: '72%' },
+  { label: 'Frontend Development (React, JavaScript, HTML5, CSS3)', target: 92 },
+  { label: 'UI/UX & Graphic Design (Figma, Photoshop, Illustrator)', target: 85 },
+  { label: 'Programming & Logic (Python, C++)', target: 78 },
+  { label: 'IoT & Embedded Systems (Arduino, Sensors)', target: 72 },
 ];
 
 const techStack = [
@@ -39,6 +39,7 @@ export default function Skills() {
   const [webDev, setWebDev] = useState(0);
   const [design, setDesign] = useState(0);
   const [engLogic, setEngLogic] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const metersRef = useRef(null);
 
   useEffect(() => {
@@ -68,6 +69,7 @@ export default function Skills() {
         progress = 0;
       }
 
+      setScrollProgress(progress);
       setWebDev(Math.round(progress * 95));
       setDesign(Math.round(progress * 88));
       setEngLogic(Math.round(progress * 82));
@@ -199,13 +201,17 @@ export default function Skills() {
                   Proficiency Breakdown
                 </h3>
                 <div className="space-y-4 pt-1">
-                  {linearSkills.map((skill, idx) => (
-                    <ProgressBar
-                      key={idx}
-                      label={skill.label}
-                      percent={skill.percent}
-                    />
-                  ))}
+                  {linearSkills.map((skill, idx) => {
+                    const currentPercent = Math.round(scrollProgress * skill.target);
+                    return (
+                      <ProgressBar
+                        key={idx}
+                        label={skill.label}
+                        percent={`${currentPercent}%`}
+                        widthPercent={currentPercent}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </CardLayout>

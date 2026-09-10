@@ -1,4 +1,5 @@
-const ProgressBar = ({ label, percent }) => {
+const ProgressBar = ({ label, percent, widthPercent }) => {
+  const widthVal = widthPercent !== undefined ? `${widthPercent}%` : percent;
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-center text-xs">
@@ -7,8 +8,8 @@ const ProgressBar = ({ label, percent }) => {
       </div>
       <div className="w-full bg-deep rounded-full h-2 overflow-hidden border border-white/5">
         <div
-          className="h-2 rounded-full bg-accent transition-all duration-700"
-          style={{ width: percent }}
+          className="h-2 rounded-full bg-accent transition-all duration-300 ease-out shadow-[0_0_8px_rgba(31,223,100,0.4)]"
+          style={{ width: widthVal }}
         />
       </div>
     </div>
