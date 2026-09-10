@@ -38,6 +38,34 @@ export default function Profile3DSection({ theme = 'dark' }) {
   };
 
   const scrollTimeoutRef = useRef(null);
+  const isSeekingRef = useRef(false);
+
+  // ── High-Speed Non-Blocking Video Seek for Backward Scrubbing ──
+  const performSeek = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !duration) return;
+
+    if (isSeekingRef.current || video.seeking) return; // Prevent seek queue buildup
+
+    const target = targetTimeRef.current;
+    if (Math.abs(video.currentTime - target) > 0.015) {
+      isSeekingRef.current = true;
+      video.currentTime = target;
+    }
+  }, [duration]);
+
+  // When browser decoder finishes current seek, catch up immediately to latest target
+  const handleSeeked = () => {
+    isSeekingRef.current = false;
+    const video = videoRef.current;
+    if (!video || !duration) return;
+
+    const target = targetTimeRef.current;
+    if (video.paused && Math.abs(video.currentTime - target) > 0.02) {
+      isSeekingRef.current = true;
+      video.currentTime = target;
+    }
+  };
 
   // ── Continuous 60fps Sync Loop: Slider & Angle Progress Smoothly from 0 to End ──
   useEffect(() => {
@@ -46,12 +74,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
     const syncLoop = () => {
       const video = videoRef.current;
       if (video && videoLoaded && duration > 0) {
-        // Continuous 360 loop while scrolling
-        if (!video.paused && video.currentTime >= duration - 0.04) {
-          video.currentTime = 0;
-        }
-
-        if (!isDraggingRef.current) {
+        // Only sync from video.currentTime while playing forward natively
+        if (!video.paused && !isDraggingRef.current) {
+          if (video.currentTime >= duration - 0.04) {
+            video.currentTime = 0;
+          }
           setCurrentTime(video.currentTime);
           targetTimeRef.current = video.currentTime;
         }
@@ -63,7 +90,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
     return () => cancelAnimationFrame(animationFrameId);
   }, [videoLoaded, duration]);
 
-  // ── 1. Scroll INSIDE the Box: Continuous Play & Continuous Rewind ──
+  // ── 1. Scroll INSIDE the Box: Continuous Play & Instant Backward Rewind ──
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
@@ -77,7 +104,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
 
       if (e.deltaY > 0) {
         // SCROLLING DOWN (FORWARD): Play continuously from 0 to end
-        // Adjust speed dynamically to match scroll intensity
         const scrollSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 65, 1.0), 3.0);
         video.playbackRate = scrollSpeed;
 
@@ -85,7 +111,6 @@ export default function Profile3DSection({ theme = 'dark' }) {
           video.play().catch(() => {});
         }
 
-        // Pause smoothly as soon as scrolling stops
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
@@ -95,7 +120,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
           }
         }, 160);
       } else if (e.deltaY < 0) {
-        // SCROLLING UP (BACKWARD): Rewind continuously
+        // SCROLLING UP (BACKWARD): Rewind instantly without seek lag
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
@@ -103,14 +128,16 @@ export default function Profile3DSection({ theme = 'dark' }) {
           video.pause();
         }
 
-        // Fine continuous rewind step
-        const rewindStep = (Math.abs(e.deltaY) / 100) * 0.06;
-        let prevTime = video.currentTime - rewindStep;
+        // Matched speed: exact same responsiveness as forward scrolling
+        const rewindSpeed = Math.min(Math.max(Math.abs(e.deltaY) / 65, 1.0), 3.0);
+        const rewindStep = (duration * 0.025) * rewindSpeed;
+
+        let prevTime = targetTimeRef.current - rewindStep;
         if (prevTime < 0) prevTime = ((duration + prevTime) % duration);
 
-        video.currentTime = prevTime;
-        setCurrentTime(prevTime);
         targetTimeRef.current = prevTime;
+        setCurrentTime(prevTime);
+        performSeek();
       }
     };
 
@@ -119,7 +146,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
       box.removeEventListener('wheel', handleWheelInsideBox);
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     };
-  }, [duration, isPlaying]);
+  }, [duration, isPlaying, performSeek]);
 
   // ── 2. Scroll OUTSIDE the Box: Video Remains at Starting Point (0s / 0°) ──
   useEffect(() => {
@@ -292,6 +319,7 @@ export default function Profile3DSection({ theme = 'dark' }) {
               }
             }}
             onError={handleVideoError}
+            onSeeked={handleSeeked}
             className={`w-full h-full object-cover object-top pointer-events-none transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
