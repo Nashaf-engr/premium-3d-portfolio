@@ -324,8 +324,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}
-          className="relative mx-auto w-full max-w-4xl lg:max-w-5xl aspect-video rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
+          className="relative mx-auto w-full max-w-4xl lg:max-w-5xl rounded-3xl overflow-hidden border shadow-2xl flex items-center justify-center backdrop-blur-xl group transition-all cursor-pointer select-none"
           style={{
+            aspectRatio: '16 / 9',
             backgroundColor: isDark ? 'rgba(5, 7, 10, 0.85)' : 'rgba(248, 250, 252, 0.95)',
             borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(226, 232, 240, 0.9)',
             boxShadow: isDark
@@ -334,10 +335,11 @@ export default function Profile3DSection({ theme = 'dark' }) {
           }}
           title="Click to play or pause introduction with voice"
         >
-          {/* Active Video Element: Native 16:9 Landscape, perfectly fitted */}
+          {/* Active Video Element: Native 16:9 Landscape, 100% uncropped */}
           <video
             ref={videoRef}
-            src="/assets/intro.mp4"
+            src="/assets/intro-widescreen.mp4"
+            poster="/assets/intro-poster.jpg"
             playsInline
             muted={isMuted}
             preload="auto"
@@ -356,9 +358,12 @@ export default function Profile3DSection({ theme = 'dark' }) {
             }}
             onError={handleVideoError}
             onSeeked={handleSeeked}
-            className={`w-full h-full object-cover object-center transition-opacity duration-500 ${
+            className={`w-full h-full object-contain object-center transition-opacity duration-500 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
+            style={{
+              aspectRatio: '16 / 9',
+            }}
           />
 
           {/* Big Center Play Button Overlay when Paused */}
@@ -392,9 +397,9 @@ export default function Profile3DSection({ theme = 'dark' }) {
           {(!videoLoaded || videoError) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <img
-                src="/assets/profile.png"
+                src="/assets/intro-poster.jpg"
                 alt="MFA Naseef Sharaf"
-                className="w-full h-full object-contain object-center opacity-50"
+                className="w-full h-full object-contain object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-center justify-center">
                 <div className="px-5 py-2.5 rounded-2xl bg-black/80 border border-white/10 backdrop-blur-md text-xs font-mono text-accent flex items-center gap-2">
